@@ -1,0 +1,8 @@
+## Interface: 11302
+## Title: ClassicHealAssignments
+## Version: 1.0
+## Author: csundlof
+
+embeds.xml
+
+ClassicHealAssignments.lua
