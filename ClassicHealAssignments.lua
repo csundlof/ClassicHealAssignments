@@ -98,8 +98,10 @@ function UpdateFrame()
             roles[role] = {}
          end
 
-         print(role)
-
+         if debug then 
+            print(role)
+         end
+         
          if not tContains(classes[class], name) then
             if debug then
                print(name .. " was added")
@@ -133,7 +135,9 @@ function UpdateFrame()
             end
          end
       elseif class == "Mage" then
-         tinsert(dispellerList, player)
+         for _, player in ipairs(players) do
+            tinsert(dispellerList, player)
+         end
       end
    end
 
