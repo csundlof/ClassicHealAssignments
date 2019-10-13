@@ -126,7 +126,7 @@ function UpdateFrame()
 	end
 
 	for role, players in pairs(roles) do
-		if role == "MAINTANK" or role == "RAID" then
+		if role == "MAINTANK" then
 			for _, player in ipairs(players) do
 				CreateAssignmentGroup(player, healerList)
 				print(player)
