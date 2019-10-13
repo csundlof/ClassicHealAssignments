@@ -138,15 +138,24 @@ function UpdateFrame()
    end
 
    for role, players in pairs(roles) do
+
       if role == "MAINTANK" then
          for _, player in ipairs(players) do
-            CreateAssignmentGroup(player, healerList)
-            print(player)
+            if assignmentGroups[player] == nil then
+               CreateAssignmentGroup(player, healerList)
+            end
+            if debug then
+               print(player)
+            end
          end
       elseif role == "RAID" then
-         CreateAssignmentGroup("RAID", healerList)
+         if assignmentGroups[role] == nil then
+            CreateAssignmentGroup("RAID", healerList)
+         end
       elseif role == "DISPELS" then
-         CreateAssignmentGroup("DISPELS", dispellerList)
+         if assignmentGroups[role] == nil then
+            CreateAssignmentGroup("DISPELS", dispellerList)
+         end
       end
    end
 end
