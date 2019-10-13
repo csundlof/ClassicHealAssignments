@@ -1,3 +1,5 @@
+require("utils.table")
+
 local ClassicHealAssignments = LibStub("AceAddon-3.0"):NewAddon("ClassicHealAssignments", "AceConsole-3.0", "AceEvent-3.0");
 local AceGUI = LibStub("AceGUI-3.0")
 local CLASS_ICON_TCOORDS = CLASS_ICON_TCOORDS
@@ -6,6 +8,7 @@ local mainWindow = AceGUI:Create("Frame")
 mainWindow:SetTitle("Classic Heal Assignments")
 mainWindow:SetStatusText("Classic Heal Assignments")
 mainWindow:SetLayout("Flow")
+mainWindow:SetWidth("1000")
 
 local healerGroup = AceGUI:Create("InlineGroup")
 healerGroup:SetTitle("Healers")
@@ -13,6 +16,10 @@ healerGroup:SetWidth(80)
 healerGroup:SetFullHeight(true)
 mainWindow:AddChild(healerGroup)
 
+local announceButton = AceGUI:Create("Button")
+announceButton:SetText("Announce assignments")
+announceButton:SetCallback("OnClick", function() AnnounceHealers() end)
+mainWindow:AddChild(announceButton)
 
 local playerFrames = {}
 
@@ -25,8 +32,7 @@ local assignedHealers = {}
 local classes = {}
 local roles = {}
 
-local healers = {["Druid"] = 105, ["Priest"] = 257, ["Paladin"] = 65, ["Shaman"] = 0}
-
+local healerColors = {["Druid"] = {1.00, 0.49, 0.04}, ["Priest"] = {1.00, 1.00, 1.00}, ["Paladin"] = {0.96, 0.55, 0.73}, ["Shaman"] = {0.96, 0.55, 0.73}}
 
 function ClassicHealAssignments:OnInitialize()
 		-- Called when the addon is loaded
@@ -62,20 +68,18 @@ function ClassicHealAssignments:ShowFrame(input)
 		mainWindow:Show()
 	end
 
-	print("\n-----------\nASSIGNMENTS")
-	for target, healers in pairs(assignedHealers) do
-		print("TANK: " .. target .. " HEALERS: ")
-		for _, healer in ipairs(healers) do
-			print(" " .. healer)
-		end
-	end
+	--AnnounceHealers()
 end
 
 
 function UpdateFrame()
 	print("\n-----------\nUPDATE")
-	roles = {}
-	classes = {}
+	local roles = {}
+	roles["DISPELS"] = {"DISPELS"}
+	roles["RAID"] = {"RAID"}
+	local classes = {}
+	local dispellerList = {}
+
 	for i=1, MAX_RAID_MEMBERS do
 		local name, _, _, _, class, _, _, _, _, role, _, _ = GetRaidRosterInfo(i);
 		if name then
@@ -98,64 +102,91 @@ function UpdateFrame()
 		end
 	end
 	
+	local healerList = {}
+
 	for class, players in pairs(classes) do
-		if healers[class] ~= nil then
+		if healerColors[class] ~= nil then
 			for _, player in ipairs(players) do
 				if playerFrames[player] == nil then
 					local nameframe = AceGUI:Create("InteractiveLabel")
-					--nameframe:SetHeight(12)
 					nameframe:SetRelativeWidth(1)
 					nameframe:SetText(player)
-					nameframe:SetImage("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES", unpack({0.7421875, 0.98828125, 0, 0.25}))
-					nameframe:SetImageSize(12, 12)
-					nameframe:SetColor(1.00, 0.49, 0.04)
-					nameframe:SetCallback("OnClick", function() print("hello") end)
+					local classColors = healerColors[class]
+					nameframe:SetColor(classColors[1], classColors[2], classColors[3])
 					playerFrames[player] = nameframe
 					healerGroup:AddChild(nameframe)
 				end
+				tinsert(healerList, player)
+				tinsert(dispellerList, player)
 				print(player)
 			end
+		elseif class == "Mage" then
+			tinsert(dispellerList, player)
 		end
 	end
 
 	for role, players in pairs(roles) do
-		if role == "MAINTANK" then
+		if role == "MAINTANK" or role == "RAID" then
 			for _, player in ipairs(players) do
-				if assignmentGroups[player] == nil then
-					local nameframe = AceGUI:Create("InlineGroup")
-					--nameframe:SetHeight(12)
-					nameframe:SetTitle(player)
-					nameframe:SetWidth(100)
-					--nameframe:SetImage("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES", unpack({0.7421875, 0.98828125, 0, 0.25}))
-					--nameframe:SetImageSize(12, 12)
-					--nameframe:SetColor(1.00, 0.49, 0.04)
-					--nameframe:SetCallback("OnClick", function() print("hello") end)
-					assignmentGroups[player] = nameframe
-					mainWindow:AddChild(nameframe)
-					for x=1, 5 do
-						local editbox = AceGUI:Create("EditBox")
-						editbox:SetText("Healer " .. x)
-						editbox:DisableButton(true)
-						editbox:SetRelativeWidth(1)
-						editbox:SetUserData("target", player)
-						editbox:SetCallback("OnEnterPressed", function(widget, event, text) AssignHealer(widget, event, text) end)
-						nameframe:AddChild(editbox)
-					end
-				end
+				CreateAssignmentGroup(player, healerList)
 				print(player)
 			end
+		elseif role == "RAID" then
+			CreateAssignmentGroup("RAID", healerList)
+		elseif role == "DISPELS" then
+			CreateAssignmentGroup("DISPELS", dispellerList)
 		end
 	end
 end
 
 
-function AssignHealer(widget, event, text)
-	-- need to unassign healer from previous target as part of this
+function AssignHealer(widget, event, key, checked, healerList)
 	local target = widget:GetUserData("target")
 	if not assignedHealers[target] then
 		assignedHealers[target] = {}
 		print("creating assigned healers dict")
 	end
-	print("assigning " .. text .. " to " .. target)
-	tinsert(assignedHealers[target], text)
+	if checked then
+		print("assigning " .. healerList[key] .. " to " .. target)
+		tinsert(assignedHealers[target], healerList[key])
+	else
+		local healerIndex = table.indexOf(assignedHealers[target], healerList[key])
+		tremove(assignedHealers[target], healerIndex)
+	end
+end
+
+
+function CreateHealerDropdown(healers)
+	local dropdown = AceGUI:Create("Dropdown")
+	dropdown:SetList(healers)
+	dropdown:SetText("Assign healer")
+	dropdown:SetFullWidth(true)
+	dropdown:SetMultiselect(true)
+	return dropdown
+end
+
+
+function AnnounceHealers()
+	print("\n-----------\nASSIGNMENTS")
+	SendChatMessage("Healing assignments", "RAID", nil)
+	for target, healers in pairs(assignedHealers) do
+		if healers ~= nil then
+			local assignment = target ..': ' .. table.concat(healers, ", ")
+			print(assignment)
+			SendChatMessage(assignment, "RAID", nil)
+		end
+	end
+end
+
+
+function CreateAssignmentGroup(assignment, playerList)
+	local nameframe = AceGUI:Create("InlineGroup")
+	nameframe:SetTitle(assignment)
+	nameframe:SetWidth(140)
+	assignmentGroups[assignment] = nameframe
+	mainWindow:AddChild(nameframe)
+	local dropdown = CreateHealerDropdown(playerList)
+	dropdown:SetUserData("target", assignment)
+	dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) AssignHealer(widget, event, key, checked, playerList) end)
+	nameframe:AddChild(dropdown)
 end
