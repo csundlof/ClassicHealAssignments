@@ -13,8 +13,13 @@ mainWindow:SetWidth("1000")
 local healerGroup = AceGUI:Create("InlineGroup")
 healerGroup:SetTitle("Healers")
 healerGroup:SetWidth(80)
-healerGroup:SetFullHeight(true)
 mainWindow:AddChild(healerGroup)
+
+local assignmentWindow = AceGUI:Create("InlineGroup")
+assignmentWindow:SetTitle("Assignments")
+assignmentWindow:SetRelativeWidth(0.9)
+assignmentWindow:SetLayout("Flow")
+mainWindow:AddChild(assignmentWindow)
 
 local announceButton = AceGUI:Create("Button")
 announceButton:SetText("Announce assignments")
@@ -101,7 +106,7 @@ function UpdateFrame()
          if debug then 
             print(role)
          end
-         
+
          if not tContains(classes[class], name) then
             if debug then
                print(name .. " was added")
@@ -142,7 +147,6 @@ function UpdateFrame()
    end
 
    for role, players in pairs(roles) do
-
       if role == "MAINTANK" then
          for _, player in ipairs(players) do
             if assignmentGroups[player] == nil then
@@ -169,10 +173,14 @@ function AssignHealer(widget, event, key, checked, healerList)
    local target = widget:GetUserData("target")
    if not assignedHealers[target] then
       assignedHealers[target] = {}
-      print("creating assigned healers dict")
+      if debug then 
+         print("creating assigned healers dict")
+      end
    end
    if checked then
-      print("assigning " .. healerList[key] .. " to " .. target)
+      if debug then
+         print("assigning " .. healerList[key] .. " to " .. target)
+      end
       tinsert(assignedHealers[target], healerList[key])
    else
       local healerIndex = table.indexOf(assignedHealers[target], healerList[key])
@@ -213,7 +221,7 @@ function CreateAssignmentGroup(assignment, playerList)
    nameframe:SetTitle(assignment)
    nameframe:SetWidth(140)
    assignmentGroups[assignment] = nameframe
-   mainWindow:AddChild(nameframe)
+   assignmentWindow:AddChild(nameframe)
    local dropdown = CreateHealerDropdown(playerList)
    dropdown:SetUserData("target", assignment)
    dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) AssignHealer(widget, event, key, checked, playerList) end)
