@@ -57,6 +57,7 @@ function ClassicHealAssignments:OnEnable()
       -- Print a message to the chat frame
       self:Print("OnEnable Event Fired: Hello, again ;)")
       UpdateFrame()
+      RegisterEvents()
 end
 
 
@@ -67,6 +68,10 @@ end
 
 ClassicHealAssignments:RegisterChatCommand("heal", "ShowFrame")
 
+function RegisterEvents()
+   -- Listen for changes in raid roster
+   ClassicHealAssignments:RegisterEvent("GROUP_ROSTER_UPDATE", "HandleRosterChange")
+end
 
 function ClassicHealAssignments:ShowFrame(input)
    if debug then
@@ -88,38 +93,14 @@ function UpdateFrame()
       print("\n-----------\nUPDATE")
    end
    local roles = {}
-   roles["DISPELS"] = {"DISPELS"}
-   roles["RAID"] = {"RAID"}
    local classes = {}
    local dispellerList = {}
-
-   for i=1, MAX_RAID_MEMBERS do
-      local name, _, _, _, class, _, _, _, _, role, _, _ = GetRaidRosterInfo(i);
-      if name then
-         if not classes[class] then
-            classes[class] = {}
-         end
-         if role ~= nil and not roles[role] then
-            roles[role] = {}
-         end
-
-         if debug then 
-            print(role)
-         end
-
-         if not tContains(classes[class], name) then
-            if debug then
-               print(name .. " was added")
-            end
-            tinsert(classes[class], name)
-            if role ~= nil then
-               tinsert(roles[role], name)
-            end
-         end
-      end
-   end
-
    local healerList = {}
+
+   classes, roles = GetRaidRoster()
+
+   roles["DISPELS"] = {"DISPELS"}
+   roles["RAID"] = {"RAID"}
 
    for class, players in pairs(classes) do
       if healerColors[class] ~= nil then
@@ -226,4 +207,56 @@ function CreateAssignmentGroup(assignment, playerList)
    dropdown:SetUserData("target", assignment)
    dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) AssignHealer(widget, event, key, checked, playerList) end)
    nameframe:AddChild(dropdown)
+end
+
+
+function ClassicHealAssignments:HandleRosterChange()
+   --CleanupFrame()
+   UpdateFrame()
+end
+
+
+function CleanupFrame()
+   _, roles = GetRaidRoster()
+   for assignment, assignmentFrame in pairs(assignmentGroups) do
+      if assignment ~= "RAID" and assignment ~= "DISPELS" and roles[assignment] == nil then
+         assignmentFrame:Release()
+         assignmentGroups[assignment] = nil
+         assignedHealers[assignment] = nil
+      end
+   end
+end
+
+
+function GetRaidRoster()
+   local classes = {}
+   local roles = {}
+
+   for i=1, MAX_RAID_MEMBERS do
+      local name, _, _, _, class, _, _, _, _, role, _, _ = GetRaidRosterInfo(i);
+      if name then
+         if not classes[class] then
+            classes[class] = {}
+         end
+         if role ~= nil and not roles[role] then
+            roles[role] = {}
+         end
+
+         if debug then 
+            print(role)
+         end
+
+         if not tContains(classes[class], name) then
+            if debug then
+               print(name .. " was added")
+            end
+            tinsert(classes[class], name)
+            if role ~= nil then
+               tinsert(roles[role], name)
+            end
+         end
+      end
+   end
+
+   return classes, roles
 end
