@@ -4,74 +4,46 @@ local ClassicHealAssignments = LibStub("AceAddon-3.0"):NewAddon("ClassicHealAssi
 local AceGUI = LibStub("AceGUI-3.0")
 local CLASS_ICON_TCOORDS = CLASS_ICON_TCOORDS
 
-local mainWindow = AceGUI:Create("Frame")
-mainWindow:SetTitle("Classic Heal Assignments")
-mainWindow:SetStatusText("Classic Heal Assignments")
-mainWindow:SetLayout("Flow")
-mainWindow:SetWidth("1000")
-
-local healerGroup = AceGUI:Create("InlineGroup")
-healerGroup:SetTitle("Healers")
-healerGroup:SetWidth(80)
-mainWindow:AddChild(healerGroup)
-
-local assignmentWindow = AceGUI:Create("InlineGroup")
-assignmentWindow:SetTitle("Assignments")
-assignmentWindow:SetRelativeWidth(0.9)
-assignmentWindow:SetLayout("Flow")
-mainWindow:AddChild(assignmentWindow)
-
-local announceButton = AceGUI:Create("Button")
-announceButton:SetText("Announce assignments")
-announceButton:SetCallback("OnClick", function() AnnounceHealers() end)
-mainWindow:AddChild(announceButton)
-
 local playerFrames = {}
 
 local assignmentGroups = {}
 
 local assignedHealers = {}
 
-local debug = false
-
-if not debug then
-   mainWindow:Hide()
-end
-
 local classes = {}
 local roles = {}
 
 local healerColors = {["Druid"] = {1.00, 0.49, 0.04}, ["Priest"] = {1.00, 1.00, 1.00}, ["Paladin"] = {0.96, 0.55, 0.73}, ["Shaman"] = {0.96, 0.55, 0.73}}
 
-function ClassicHealAssignments:OnInitialize()
-      -- Called when the addon is loaded
 
-      -- Print a message to the chat frame
-      self:Print("OnInitialize Event Fired: Hello")
+function ClassicHealAssignments:OnInitialize()
+      ClassicHealAssignments:RegisterChatCommand("heal", "ShowFrame")
 end
 
 
 function ClassicHealAssignments:OnEnable()
-      -- Called when the addon is enabled
-
-      -- Print a message to the chat frame
-      self:Print("OnEnable Event Fired: Hello, again ;)")
+      SetupFrame()
+      SetupFrameContainers()
       UpdateFrame()
       RegisterEvents()
+
+      debug = false
+
+      if not debug then
+         mainWindow:Hide()
+      end
 end
 
 
 function ClassicHealAssignments:OnDisable()
-      -- Called when the addon is disabled
 end
 
-
-ClassicHealAssignments:RegisterChatCommand("heal", "ShowFrame")
 
 function RegisterEvents()
    -- Listen for changes in raid roster
    ClassicHealAssignments:RegisterEvent("GROUP_ROSTER_UPDATE", "HandleRosterChange")
 end
+
 
 function ClassicHealAssignments:ShowFrame(input)
    if debug then
@@ -83,8 +55,6 @@ function ClassicHealAssignments:ShowFrame(input)
       UpdateFrame()
       mainWindow:Show()
    end
-
-   --AnnounceHealers()
 end
 
 
@@ -147,6 +117,10 @@ function UpdateFrame()
          end
       end
    end
+
+   -- calling twice to avoid inconsistencies between re-renders
+   mainWindow:DoLayout()
+   mainWindow:DoLayout()
 end
 
 
@@ -170,12 +144,17 @@ function AssignHealer(widget, event, key, checked, healerList)
 end
 
 
-function CreateHealerDropdown(healers)
+function CreateHealerDropdown(healers, assignment)
    local dropdown = AceGUI:Create("Dropdown")
    dropdown:SetList(healers)
    dropdown:SetText("Assign healer")
    dropdown:SetFullWidth(true)
    dropdown:SetMultiselect(true)
+   if assignedHealers[assignment] ~= nil then
+      for _,v in ipairs(assignedHealers[assignment]) do
+         dropdown:SetItemValue(table.indexOf(healers, v), true)
+      end
+   end
    return dropdown
 end
 
@@ -203,7 +182,7 @@ function CreateAssignmentGroup(assignment, playerList)
    nameframe:SetWidth(140)
    assignmentGroups[assignment] = nameframe
    assignmentWindow:AddChild(nameframe)
-   local dropdown = CreateHealerDropdown(playerList)
+   local dropdown = CreateHealerDropdown(playerList, assignment)
    dropdown:SetUserData("target", assignment)
    dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) AssignHealer(widget, event, key, checked, playerList) end)
    nameframe:AddChild(dropdown)
@@ -211,20 +190,53 @@ end
 
 
 function ClassicHealAssignments:HandleRosterChange()
-   --CleanupFrame()
+   CleanupFrame()
+   SetupFrameContainers()
    UpdateFrame()
 end
 
 
 function CleanupFrame()
    _, roles = GetRaidRoster()
+
+   -- unassign healers from assignment targets that have been unchecked
    for assignment, assignmentFrame in pairs(assignmentGroups) do
-      if assignment ~= "RAID" and assignment ~= "DISPELS" and roles[assignment] == nil then
-         assignmentFrame:Release()
-         assignmentGroups[assignment] = nil
+      if not tContains(roles["MAINTANK"], assignment) and assignment ~= "RAID" and assignment ~= "DISPELS" then
          assignedHealers[assignment] = nil
       end
    end
+
+   assignmentGroups = {}
+   playerFrames = {}
+   mainWindow:ReleaseChildren()
+end
+
+
+function SetupFrame()
+   mainWindow = AceGUI:Create("Frame")
+   mainWindow:SetTitle("Classic Heal Assignments")
+   mainWindow:SetStatusText("Classic Heal Assignments")
+   mainWindow:SetLayout("Flow")
+   mainWindow:SetWidth("1000")
+end
+
+
+function SetupFrameContainers()
+   healerGroup = AceGUI:Create("InlineGroup")
+   healerGroup:SetTitle("Healers")
+   healerGroup:SetWidth(80)
+   mainWindow:AddChild(healerGroup)
+
+   assignmentWindow = AceGUI:Create("InlineGroup")
+   assignmentWindow:SetTitle("Assignments")
+   assignmentWindow:SetRelativeWidth(0.9)
+   assignmentWindow:SetLayout("Flow")
+   mainWindow:AddChild(assignmentWindow)
+
+   local announceButton = AceGUI:Create("Button")
+   announceButton:SetText("Announce assignments")
+   announceButton:SetCallback("OnClick", function() AnnounceHealers() end)
+   mainWindow:AddChild(announceButton)
 end
 
 
