@@ -1,5 +1,3 @@
-require("utils.table")
-
 local ClassicHealAssignments = LibStub("AceAddon-3.0"):NewAddon("ClassicHealAssignments", "AceConsole-3.0", "AceEvent-3.0");
 local AceGUI = LibStub("AceGUI-3.0")
 local CLASS_ICON_TCOORDS = CLASS_ICON_TCOORDS
