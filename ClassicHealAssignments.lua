@@ -190,9 +190,11 @@ end
 
 
 function ClassicHealAssignments:HandleRosterChange()
-   CleanupFrame()
-   SetupFrameContainers()
-   UpdateFrame()
+   if IsInRaid() then
+      CleanupFrame()
+      SetupFrameContainers()
+      UpdateFrame()
+   end
 end
 
 
@@ -201,7 +203,7 @@ function CleanupFrame()
 
    -- unassign healers from assignment targets that have been unchecked
    for assignment, assignmentFrame in pairs(assignmentGroups) do
-      if not tContains(roles["MAINTANK"], assignment) and assignment ~= "RAID" and assignment ~= "DISPELS" then
+      if assignment ~= "RAID" and assignment ~= "DISPELS" and (roles["MAINTANK"] == nil or not tContains(roles["MAINTANK"], assignment)) then
          assignedHealers[assignment] = nil
       end
    end
