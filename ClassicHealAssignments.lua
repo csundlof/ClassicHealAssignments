@@ -70,6 +70,7 @@ function UpdateFrame()
    roles["DISPELS"] = {"DISPELS"}
    roles["RAID"] = {"RAID"}
 
+
    for class, players in pairs(classes) do
       if healerColors[class] ~= nil then
          for _, player in ipairs(players) do
@@ -173,6 +174,14 @@ function AnnounceHealers()
    end
 end
 
+--saves the preset name and stores it in a container
+--later functionality to save the full preset of where all of the healers are
+--function SaveState() 
+	--if debug then
+		--print("\n-----------\nSAVESTATE")
+	--end
+--end
+
 
 function CreateAssignmentGroup(assignment, playerList)
    local nameframe = AceGUI:Create("InlineGroup")
@@ -237,6 +246,24 @@ function SetupFrameContainers()
    announceButton:SetText("Announce assignments")
    announceButton:SetCallback("OnClick", function() AnnounceHealers() end)
    mainWindow:AddChild(announceButton)
+
+   --button to save the state of all of the locations of the healers at the time
+   --local savestateButton = AceGUI:Create("Button");
+   --savestateButton:setText("Save");
+   --savestateButton:SetCallback("OnClick", function ()( SaveState() end)
+   --mainWindow:AddChild(savestateButton)
+
+   --creates the name for the save state
+   --local presetStore
+   --local savestateNameBox = AceGUI:Create("EditBox");
+	--savestateNameBox:SetWidth(200)
+	--savestateNameBox:SetLabel("Preset Name")
+	--savestateNameBox:SetCallback("OnEnterPressed", function(widget, event, text) presetStore = text end)
+	--mainWindow:AddChild(savestateNameBox)
+
+	--dropdown showing all of the frames
+end
+)
 end
 
 
