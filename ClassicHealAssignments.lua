@@ -8,6 +8,11 @@ local assignmentGroups = {}
 
 local assignedHealers = {}
 
+--variables to store presets, currently just for names
+local presetList = {}
+local presetFrames = {}
+local presetStore
+
 local classes = {}
 local roles = {}
 
@@ -65,6 +70,8 @@ function UpdateFrame()
    local dispellerList = {}
    local healerList = {}
 
+   local presetName --used to iterate through preset list
+
    classes, roles = GetRaidRoster()
 
    roles["DISPELS"] = {"DISPELS"}
@@ -117,6 +124,19 @@ function UpdateFrame()
       end
    end
 
+   --add preset names to container
+   if presetList ~= nil then
+		for i, presetName in ipairs(presetList) do 
+			if presetFrames[presetName] == nil then
+               local nameframe = AceGUI:Create("InteractiveLabel")
+               nameframe:SetRelativeWidth(1)
+               nameframe:SetText(presetName)
+               presetFrames[presetName] = nameframe
+			   presetGroup:AddChild(nameframe)
+			end
+		end
+	end
+
    -- calling twice to avoid inconsistencies between re-renders
    mainWindow:DoLayout()
    mainWindow:DoLayout()
@@ -156,6 +176,16 @@ function CreateHealerDropdown(healers, assignment)
    end
    return dropdown
 end
+
+--dummy function which will later implement a save state feature
+function SaveState()
+	if debug then
+		print("\n-----------\nSAVESTATE")
+	end
+	tinsert(presetList, presetStore)
+	UpdateFrame()
+end
+
 
 
 function AnnounceHealers()
@@ -242,28 +272,31 @@ function SetupFrameContainers()
    assignmentWindow:SetLayout("Flow")
    mainWindow:AddChild(assignmentWindow)
 
+   --creates a basic window to test presets
+   presetGroup = AceGUI:Create("InlineGroup")
+   presetGroup:SetTitle("Presets")
+   presetGroup:SetWidth(80)
+   mainWindow:AddChild(presetGroup)
+
    local announceButton = AceGUI:Create("Button")
    announceButton:SetText("Announce assignments")
    announceButton:SetCallback("OnClick", function() AnnounceHealers() end)
    mainWindow:AddChild(announceButton)
 
    --button to save the state of all of the locations of the healers at the time
-   --local savestateButton = AceGUI:Create("Button");
-   --savestateButton:setText("Save");
-   --savestateButton:SetCallback("OnClick", function ()( SaveState() end)
-   --mainWindow:AddChild(savestateButton)
+   local savestateButton = AceGUI:Create("Button");
+   savestateButton:SetText("Save");
+   savestateButton:SetCallback("OnClick", function () SaveState() end)
+   mainWindow:AddChild(savestateButton)
 
    --creates the name for the save state
-   --local presetStore
-   --local savestateNameBox = AceGUI:Create("EditBox");
-	--savestateNameBox:SetWidth(200)
-	--savestateNameBox:SetLabel("Preset Name")
-	--savestateNameBox:SetCallback("OnEnterPressed", function(widget, event, text) presetStore = text end)
-	--mainWindow:AddChild(savestateNameBox)
+   local savestateNameBox = AceGUI:Create("EditBox");
+	savestateNameBox:SetWidth(200)
+	savestateNameBox:SetLabel("Preset Name")
+	savestateNameBox:SetCallback("OnEnterPressed", function(widget, event, text) presetStore = text end)
+	mainWindow:AddChild(savestateNameBox)
 
 	--dropdown showing all of the frames
-end
-)
 end
 
 
