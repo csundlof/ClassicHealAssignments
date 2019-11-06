@@ -182,13 +182,31 @@ function CreateHealerDropdown(healers, assignment)
 end
 
 --dummy function which will later implement a save state feature
-function SaveState()
+function SaveState(savename)
 	if debug then
 		print("\n-----------\nSAVESTATE")
 	end
+
+	--here should be a loop to go through the AssignedHealers list
+	--it will save all of the list to PresetList and add an additional column
+	--presetName attached to it.
+	presetList[savename] = assignedHealers
+
 	tinsert(presetList, presetStore)
+	Cleanupframe()
 	UpdateFrame()
 end
+
+--will eventually need an option to delete presets
+function DeleteState(savename)
+	if debug then
+		print("\n-----------\nDELETESTATE")
+	end
+	presetList[savename] = nil
+	Cleanupframe()
+	UpdateFrame()
+end
+
 
 --dummy function which will later implement the load state feature. activated by clicking frames
 function LoadState(loadname, loadframe)
@@ -198,6 +216,9 @@ function LoadState(loadname, loadframe)
 	savestateNameBox:SetText(loadname)
 	loadframe:SetHighlight(168, 159, 255)
 	loadframe:SetColor(168, 159, 255, 0.5)
+	assignedHealers = presetList[name]
+	CleanupFrame()
+	SetupFrameContainers()
 	UpdateFrame()
 end
 
@@ -300,7 +321,7 @@ function SetupFrameContainers()
    --button to save the state of all of the locations of the healers at the time
    local savestateButton = AceGUI:Create("Button");
    savestateButton:SetText("Save");
-   savestateButton:SetCallback("OnClick", function () SaveState() end)
+   savestateButton:SetCallback("OnClick", function () SaveState(presetStore) end)
    mainWindow:AddChild(savestateButton)
 
    --creates the name for the save state
@@ -309,7 +330,10 @@ function SetupFrameContainers()
 	savestateNameBox:SetCallback("OnEnterPressed", function(widget, event, text) presetStore = text end)
 	mainWindow:AddChild(savestateNameBox)
 
-	--dropdown showing all of the frames
+	--deletes the currently selected preset
+	local deletestateButton = AceGui:Create("Button")
+	deletestateButton:SetText("Delete Preset")
+	deletestateButton:SetCallback("OnClick", function() DeleteState(presetStore) end)
 end
 
 
