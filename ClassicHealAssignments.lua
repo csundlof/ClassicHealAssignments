@@ -13,6 +13,8 @@ local presetList = {}
 local presetFrames = {}
 local presetStore
 
+local savestateNameBox = AceGUI:Create("EditBox"); --text box stored in global to be able to manipulate text value without passing 
+
 local classes = {}
 local roles = {}
 
@@ -131,6 +133,8 @@ function UpdateFrame()
                local nameframe = AceGUI:Create("InteractiveLabel")
                nameframe:SetRelativeWidth(1)
                nameframe:SetText(presetName)
+			   nameframe:SetColor(168, 159, 255)
+			   nameframe:SetCallback("OnClick", function() LoadState(presetName, nameframe) end)
                presetFrames[presetName] = nameframe
 			   presetGroup:AddChild(nameframe)
 			end
@@ -186,6 +190,16 @@ function SaveState()
 	UpdateFrame()
 end
 
+--dummy function which will later implement the load state feature. activated by clicking frames
+function LoadState(loadname, loadframe)
+	if debug then
+		print("\n-----------\nLOADSTATE")
+	end
+	savestateNameBox:SetText(loadname)
+	loadframe:SetHighlight(168, 159, 255)
+	loadframe:SetColor(168, 159, 255, 0.5)
+	UpdateFrame()
+end
 
 
 function AnnounceHealers()
@@ -290,7 +304,6 @@ function SetupFrameContainers()
    mainWindow:AddChild(savestateButton)
 
    --creates the name for the save state
-   local savestateNameBox = AceGUI:Create("EditBox");
 	savestateNameBox:SetWidth(200)
 	savestateNameBox:SetLabel("Preset Name")
 	savestateNameBox:SetCallback("OnEnterPressed", function(widget, event, text) presetStore = text end)
