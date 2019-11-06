@@ -30,13 +30,18 @@ function table.indexOf(table, value)
    return nil
 end
 
---contains value in table
-function table.myHasValue(table, value)
-  for i, v in ipairs(table) do
-    if v == value then
-      return true
-    end
-  end
+-- merge source table into target table
+function table.merge(target, source)
+   for _, n in pairs(source) do
+      table.insert(target, n)
+   end
+ end
 
-  return false
+ -- flattens table to an array of the table keys.
+function table.getKeys(table)
+   local keys = {}
+   for k, _ in pairs(table) do
+      tinsert(keys, k)
+   end
+   return keys
 end

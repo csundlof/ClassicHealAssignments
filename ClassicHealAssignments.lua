@@ -30,7 +30,7 @@ function ClassicHealAssignments:OnEnable()
       UpdateFrame()
       RegisterEvents()
 
-      debug = false
+      debug = true
 
       if not debug then
          mainWindow:Hide()
@@ -167,14 +167,14 @@ function AnnounceHealers()
    if debug then
       print("\n-----------\nASSIGNMENTS")
    end
-   BroadcastChannels("Healing Assignments")
+   AnnounceAssignments("Healing Assignments")
    for target, healers in pairs(assignedHealers) do
       if healers ~= nil then
          local assignment = target ..': ' .. table.concat(healers, ", ")
          if debug then
             print(assignment)
          end
-         BroadcastChannels(assignment)
+         AnnounceAssignments(assignment)
       end
    end
 end
@@ -202,7 +202,7 @@ function ClassicHealAssignments:HandleRosterChange()
 end
 
 function SelectChannel(widget, event, key, checked)
-   local channels = AllChannelNames()
+   local channels = GetAllChannelNames()
    local s = channels[key]
    if checked then
       if key <= #defaultChannels then
@@ -216,7 +216,7 @@ function SelectChannel(widget, event, key, checked)
 
    if debug then
       print("Selected channels:")
-      for ch,id in pairs(selectedChannels) do
+      for ch, id in pairs(selectedChannels) do
          print("ch="..ch.." id="..id)
       end
    end
@@ -224,11 +224,10 @@ end
 
 function CreateChannelDropdown()
    local dropdown = AceGUI:Create("Dropdown")
-   local channels = AllChannelNames()
-   print("creating channel dropdown: ")
+   local channels = GetAllChannelNames()
    dropdown:SetList(channels)
-   dropdown:SetLabel("Broadcasted channels:")
-   dropdown:SetText("select channels")
+   dropdown:SetLabel("Announcement channels")
+   dropdown:SetText("Select channels")
    dropdown:SetWidth(100)
    dropdown:SetMultiselect(true)
    dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) SelectChannel(widget, event, key, checked) end)
@@ -236,8 +235,8 @@ function CreateChannelDropdown()
 end
 
 -- Sends MSG to preselected channels
-function BroadcastChannels(msg)
-   for ch,id in pairs(selectedChannels) do
+function AnnounceAssignments(msg)
+   for ch, id in pairs(selectedChannels) do
       if id == "default" then
          SendChatMessage(msg, ch, nil)
       else
@@ -248,14 +247,14 @@ end
 
 function UpdateChannels()
    activeChannels = {}
+   selectedChannels = {}
    local channels = {GetChannelList()} --returns triads of values: id,name,disabled
-   local blizChannels = {EnumerateServerChannels()}
-   for i=1,table.getn(channels), 3 do
+   local blizzChannels = {EnumerateServerChannels()}
+   for i = 1, table.getn(channels), 3 do
       local id, name = GetChannelName(channels[i])
       if name ~= nil then
          local prunedName = string.match(name, "(%w+)") --filter out blizzard channels
-         if table.myHasValue(blizChannels, prunedName) == false then
-            --table.insert(activeChannels, {Cname = name, Cid = id})
+         if not tContains(blizzChannels, prunedName) then
             activeChannels[name] = id
          end
       end
@@ -263,29 +262,20 @@ function UpdateChannels()
    end
 end
 
-function AllChannelNames()
+function GetAllChannelNames()
    local names = {}
-   for _,n in ipairs(defaultChannels) do
-      table.insert(names, n)
-   end
-   for _,n in ipairs(ActiveChannelNames()) do
-      table.insert(names, n)
-   end
-   return names
-end
-
-function ActiveChannelNames()
-   local names = {}
-   for name,_ in pairs(activeChannels) do
-      table.insert(names, name)
-   end
+   table.merge(names, defaultChannels)
+   table.merge(names, table.getKeys(activeChannels))
    return names
 end
 
 function ClassicHealAssignments:HandleChannelUpdate()
    UpdateChannels()
+   if debug then
+      print(unpack(selectedChannels))
+   end
    if channelDropdown ~= nil then
-      local channels = AllChannelNames()
+      local channels = GetAllChannelNames()
       channelDropdown:SetList(channels)
    end
 end
