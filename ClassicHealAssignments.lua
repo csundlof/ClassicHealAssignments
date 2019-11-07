@@ -8,12 +8,11 @@ local assignmentGroups = {}
 
 local assignedHealers = {}
 
---variables to store presets, currently just for names
+--variables to store presets
 local presetList = {}
 local presetFrames = {}
 local presetStore
-
-local savestateNameBox = AceGUI:Create("EditBox"); --text box stored in global to be able to manipulate text value without passing 
+local presetEditBoxText = "Store your preset name here"
 
 local classes = {}
 local roles = {}
@@ -127,13 +126,16 @@ function UpdateFrame()
    end
 
    --add preset names to container
+   print("preset list: " .. table.concat(presetList, ","))
    if presetList ~= nil then
-		for i, presetName in ipairs(presetList) do 
+		for presetName, assignments in pairs(presetList) do 
 			if presetFrames[presetName] == nil then
+				print("creating frame for preset...")
                local nameframe = AceGUI:Create("InteractiveLabel")
                nameframe:SetRelativeWidth(1)
                nameframe:SetText(presetName)
 			   nameframe:SetColor(168, 159, 255)
+			   nameframe:SetHighlight(0.33, 10, 145, 100)
 			   nameframe:SetCallback("OnClick", function() LoadState(presetName, nameframe) end)
                presetFrames[presetName] = nameframe
 			   presetGroup:AddChild(nameframe)
@@ -187,13 +189,58 @@ function SaveState(savename)
 		print("\n-----------\nSAVESTATE")
 	end
 
-	--here should be a loop to go through the AssignedHealers list
-	--it will save all of the list to PresetList and add an additional column
-	--presetName attached to it.
-	presetList[savename] = assignedHealers
+	--CATCH IF SAVENAME IS NULL
 
-	tinsert(presetList, presetStore)
-	Cleanupframe()
+	print("saving preset list..." .. savename)
+
+	presetList[savename] = {}
+	local copyTargets = {}
+	for target, healers in pairs(assignedHealers) do
+		local copyHealers = {}
+		for i, players in ipairs(healers) do 
+			copyHealers[i] = players 
+		end
+		copyTargets[target] = copyHealers
+	end
+
+	presetList[savename] = copyTargets
+
+	for presetName, assignments in pairs(presetList) do
+		print("present name: " .. presetName)
+		if assignments[DISPELS] ~= nil then
+			print("First assignment: " .. table.concat(assignments[DISPELS], ","))
+		end
+	end
+
+	CleanupFrame()
+	SetupFrameContainers()
+	UpdateFrame()
+end
+
+--dummy function which will later implement the load state feature. activated by clicking frames
+function LoadState(loadname, loadframe)
+	if debug then
+		print("\n-----------\nLOADSTATE")
+	end
+
+	presetEditBoxText = loadname
+	assignedHealers = {}
+	local copyTargets = {}
+	for target, healers in pairs(presetList[loadname]) do
+		local copyHealers = {}
+		for i, players in ipairs(healers) do 
+			copyHealers[i] = players 
+		end
+		copyTargets[target] = copyHealers
+	end
+
+	assignedHealers = copyTargets
+
+	for i, x in pairs(assignedHealers) do
+		print("Current assignments after loading: " .. i .. table.concat(x, ","))
+	end
+	CleanupFrame()
+	SetupFrameContainers()
 	UpdateFrame()
 end
 
@@ -202,26 +249,10 @@ function DeleteState(savename)
 	if debug then
 		print("\n-----------\nDELETESTATE")
 	end
-	presetList[savename] = nil
-	Cleanupframe()
-	UpdateFrame()
-end
-
-
---dummy function which will later implement the load state feature. activated by clicking frames
-function LoadState(loadname, loadframe)
-	if debug then
-		print("\n-----------\nLOADSTATE")
-	end
-	savestateNameBox:SetText(loadname)
-	loadframe:SetHighlight(168, 159, 255)
-	loadframe:SetColor(168, 159, 255, 0.5)
-	assignedHealers = presetList[name]
+	presetList[savename] = {}
 	CleanupFrame()
-	SetupFrameContainers()
 	UpdateFrame()
 end
-
 
 function AnnounceHealers()
    if debug then
@@ -238,14 +269,6 @@ function AnnounceHealers()
       end
    end
 end
-
---saves the preset name and stores it in a container
---later functionality to save the full preset of where all of the healers are
---function SaveState() 
-	--if debug then
-		--print("\n-----------\nSAVESTATE")
-	--end
---end
 
 
 function CreateAssignmentGroup(assignment, playerList)
@@ -282,6 +305,7 @@ function CleanupFrame()
 
    assignmentGroups = {}
    playerFrames = {}
+   presetFrames = {}
    mainWindow:ReleaseChildren()
 end
 
@@ -325,15 +349,18 @@ function SetupFrameContainers()
    mainWindow:AddChild(savestateButton)
 
    --creates the name for the save state
+    savestateNameBox = AceGUI:Create("EditBox");
 	savestateNameBox:SetWidth(200)
 	savestateNameBox:SetLabel("Preset Name")
+	savestateNameBox:SetText(presetEditBoxText)
 	savestateNameBox:SetCallback("OnEnterPressed", function(widget, event, text) presetStore = text end)
 	mainWindow:AddChild(savestateNameBox)
 
 	--deletes the currently selected preset
-	local deletestateButton = AceGui:Create("Button")
+	local deletestateButton = AceGUI:Create("Button")
 	deletestateButton:SetText("Delete Preset")
 	deletestateButton:SetCallback("OnClick", function() DeleteState(presetStore) end)
+	--mainWindow:AddChild(deletestateButton)
 end
 
 
