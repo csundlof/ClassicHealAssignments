@@ -30,12 +30,14 @@ function table.indexOf(table, value)
    return nil
 end
 
+
 -- merge source table into target table
 function table.merge(target, source)
    for _, n in pairs(source) do
       table.insert(target, n)
    end
  end
+
 
  -- flattens table to an array of the table keys.
 function table.getKeys(table)

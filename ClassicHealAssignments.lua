@@ -30,7 +30,7 @@ function ClassicHealAssignments:OnEnable()
       UpdateFrame()
       RegisterEvents()
 
-      debug = true
+      debug = false
 
       if not debug then
          mainWindow:Hide()
@@ -201,6 +201,7 @@ function ClassicHealAssignments:HandleRosterChange()
    end
 end
 
+
 function SelectChannel(widget, event, key, checked)
    local channels = GetAllChannelNames()
    local s = channels[key]
@@ -222,6 +223,7 @@ function SelectChannel(widget, event, key, checked)
    end
 end
 
+
 function CreateChannelDropdown()
    local dropdown = AceGUI:Create("Dropdown")
    local channels = GetAllChannelNames()
@@ -234,6 +236,7 @@ function CreateChannelDropdown()
    return dropdown
 end
 
+
 -- Sends MSG to preselected channels
 function AnnounceAssignments(msg)
    for ch, id in pairs(selectedChannels) do
@@ -244,6 +247,7 @@ function AnnounceAssignments(msg)
       end
    end
 end
+
 
 function UpdateChannels()
    activeChannels = {}
@@ -262,12 +266,14 @@ function UpdateChannels()
    end
 end
 
+
 function GetAllChannelNames()
    local names = {}
    table.merge(names, defaultChannels)
    table.merge(names, table.getKeys(activeChannels))
    return names
 end
+
 
 function ClassicHealAssignments:HandleChannelUpdate()
    UpdateChannels()
@@ -279,6 +285,7 @@ function ClassicHealAssignments:HandleChannelUpdate()
       channelDropdown:SetList(channels)
    end
 end
+
 
 function CleanupFrame()
    _, roles = GetRaidRoster()
