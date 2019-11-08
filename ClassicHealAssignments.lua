@@ -6,13 +6,7 @@ local playerFrames = {}
 
 local assignmentGroups = {}
 
-local assignedHealers = {}
-
---variables to store presets
-local presetList = {}
-local presetFrames = {}
-local presetStore
-local presetEditBoxText = "Store your preset name here"
+assignedHealers = {}
 
 local classes = {}
 local roles = {}
@@ -37,7 +31,6 @@ function ClassicHealAssignments:OnEnable()
          mainWindow:Hide()
       end
 end
-
 
 function ClassicHealAssignments:OnDisable()
 end
@@ -125,23 +118,8 @@ function UpdateFrame()
       end
    end
 
-   --add preset names to container
-   print("preset list: " .. table.concat(presetList, ","))
-   if presetList ~= nil then
-		for presetName, assignments in pairs(presetList) do 
-			if presetFrames[presetName] == nil then
-				print("creating frame for preset...")
-               local nameframe = AceGUI:Create("InteractiveLabel")
-               nameframe:SetRelativeWidth(1)
-               nameframe:SetText(presetName)
-			   nameframe:SetColor(168, 159, 255)
-			   nameframe:SetHighlight(0.33, 10, 145, 100)
-			   nameframe:SetCallback("OnClick", function() LoadState(presetName, nameframe) end)
-               presetFrames[presetName] = nameframe
-			   presetGroup:AddChild(nameframe)
-			end
-		end
-	end
+
+   AssignmentPresetsUpdatePresets(assignedHealers)
 
    -- calling twice to avoid inconsistencies between re-renders
    mainWindow:DoLayout()
@@ -181,77 +159,6 @@ function CreateHealerDropdown(healers, assignment)
       end
    end
    return dropdown
-end
-
---dummy function which will later implement a save state feature
-function SaveState(savename)
-	if debug then
-		print("\n-----------\nSAVESTATE")
-	end
-
-	--CATCH IF SAVENAME IS NULL
-
-	print("saving preset list..." .. savename)
-
-	presetList[savename] = {}
-	local copyTargets = {}
-	for target, healers in pairs(assignedHealers) do
-		local copyHealers = {}
-		for i, players in ipairs(healers) do 
-			copyHealers[i] = players 
-		end
-		copyTargets[target] = copyHealers
-	end
-
-	presetList[savename] = copyTargets
-
-	for presetName, assignments in pairs(presetList) do
-		print("present name: " .. presetName)
-		if assignments[DISPELS] ~= nil then
-			print("First assignment: " .. table.concat(assignments[DISPELS], ","))
-		end
-	end
-
-	CleanupFrame()
-	SetupFrameContainers()
-	UpdateFrame()
-end
-
---dummy function which will later implement the load state feature. activated by clicking frames
-function LoadState(loadname, loadframe)
-	if debug then
-		print("\n-----------\nLOADSTATE")
-	end
-
-	presetEditBoxText = loadname
-	assignedHealers = {}
-	local copyTargets = {}
-	for target, healers in pairs(presetList[loadname]) do
-		local copyHealers = {}
-		for i, players in ipairs(healers) do 
-			copyHealers[i] = players 
-		end
-		copyTargets[target] = copyHealers
-	end
-
-	assignedHealers = copyTargets
-
-	for i, x in pairs(assignedHealers) do
-		print("Current assignments after loading: " .. i .. table.concat(x, ","))
-	end
-	CleanupFrame()
-	SetupFrameContainers()
-	UpdateFrame()
-end
-
---will eventually need an option to delete presets
-function DeleteState(savename)
-	if debug then
-		print("\n-----------\nDELETESTATE")
-	end
-	presetList[savename] = {}
-	CleanupFrame()
-	UpdateFrame()
 end
 
 function AnnounceHealers()
@@ -305,7 +212,7 @@ function CleanupFrame()
 
    assignmentGroups = {}
    playerFrames = {}
-   presetFrames = {}
+   AssignmentPresetsCleanup()
    mainWindow:ReleaseChildren()
 end
 
@@ -331,36 +238,13 @@ function SetupFrameContainers()
    assignmentWindow:SetLayout("Flow")
    mainWindow:AddChild(assignmentWindow)
 
-   --creates a basic window to test presets
-   presetGroup = AceGUI:Create("InlineGroup")
-   presetGroup:SetTitle("Presets")
-   presetGroup:SetWidth(80)
-   mainWindow:AddChild(presetGroup)
+   AssignmentPresetsSetupFrameContainers(mainWindow, assignedHealers)
 
    local announceButton = AceGUI:Create("Button")
    announceButton:SetText("Announce assignments")
    announceButton:SetCallback("OnClick", function() AnnounceHealers() end)
    mainWindow:AddChild(announceButton)
 
-   --button to save the state of all of the locations of the healers at the time
-   local savestateButton = AceGUI:Create("Button");
-   savestateButton:SetText("Save");
-   savestateButton:SetCallback("OnClick", function () SaveState(presetStore) end)
-   mainWindow:AddChild(savestateButton)
-
-   --creates the name for the save state
-    savestateNameBox = AceGUI:Create("EditBox");
-	savestateNameBox:SetWidth(200)
-	savestateNameBox:SetLabel("Preset Name")
-	savestateNameBox:SetText(presetEditBoxText)
-	savestateNameBox:SetCallback("OnEnterPressed", function(widget, event, text) presetStore = text end)
-	mainWindow:AddChild(savestateNameBox)
-
-	--deletes the currently selected preset
-	local deletestateButton = AceGUI:Create("Button")
-	deletestateButton:SetText("Delete Preset")
-	deletestateButton:SetCallback("OnClick", function() DeleteState(presetStore) end)
-	--mainWindow:AddChild(deletestateButton)
 end
 
 
