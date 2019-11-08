@@ -251,7 +251,6 @@ end
 
 function UpdateChannels()
    activeChannels = {}
-   selectedChannels = {}
    local channels = {GetChannelList()} --returns triads of values: id,name,disabled
    local blizzChannels = {EnumerateServerChannels()}
    for i = 1, table.getn(channels), 3 do
@@ -261,6 +260,10 @@ function UpdateChannels()
          if not tContains(blizzChannels, prunedName) then
             activeChannels[name] = id
          end
+	  else --only cleans selectedChannels if the channel name was removed from the list
+		if selectedChannels[name] ~= nil then
+			selectedChannels[name] = nil
+		end
       end
 
    end
