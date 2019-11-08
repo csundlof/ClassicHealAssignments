@@ -235,14 +235,14 @@ function CreateChannelDropdown()
    dropdown:SetMultiselect(true)
    dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) SelectChannel(widget, event, key, checked) end)
 
-   print("value of selected channels: " .. table.concat(selectedChannels, ","))
-   if selectedChannels ~= nil then
-      print("selected channels are not nil!")
-      for v,_ in ipairs(selectedChannels) do
-         print("pushing v..." .. v)
-         dropdown:SetItemValue(table.indexOf(v), true)
+   -- looks through channel list to pull the index value & checks the channel in the list
+   local channels = GetAllChannelNames()
+   for channelName, selected in pairs(selectedChannels) do
+      if activeChannels ~= nill then
+         dropdown:SetItemValue(table.indexOf(channels, channelName), true)
       end
    end
+
    return dropdown
 end
 
@@ -261,7 +261,6 @@ end
 
 function UpdateChannels()
    activeChannels = {}
-   print("selected channels b4 update: " .. table.concat(selectedChannels, ","))
    local channels = {GetChannelList()} --returns triads of values: id,name,disabled
    local blizzChannels = {EnumerateServerChannels()}
    for i = 1, table.getn(channels), 3 do
@@ -277,8 +276,6 @@ function UpdateChannels()
         end
       end
    end
-
-   print("selected channels after update: " .. table.concat(selectedChannels, ","))
 end
 
 
