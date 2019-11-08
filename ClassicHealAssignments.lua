@@ -46,6 +46,7 @@ function RegisterEvents()
    -- Listen for changes in raid roster
    ClassicHealAssignments:RegisterEvent("CHANNEL_UI_UPDATE", "HandleChannelUpdate")
    ClassicHealAssignments:RegisterEvent("GROUP_ROSTER_UPDATE", "HandleRosterChange")
+   ClassicHealAssignments:RegisterEvent("CHAT_MSG_WHISPER", "ReplyWithAssignment")
 end
 
 
@@ -365,4 +366,21 @@ function GetRaidRoster()
    end
 
    return classes, roles
+end
+
+-- listens for 'heal' and replies the target's current healing assignments if any
+-- only replies if character is in raid
+function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
+   -- chopping off server tag that comes with character to parse it more easily
+   local characterParse = string.gsub(character, "-(.*)", "")
+   
+   if msg == "heal" and UnitInRaid(characterParse) then
+      local replyAssignment = {}
+         for target, healers in pairs(assignedHealers) do
+            if healers[characterParse] ~= nil then  
+                  table.insert(replyAssignment, target)
+            end
+         end
+      SendChatMessage("You are assigned to: " .. table.concat(replyAssignment, ", "), "WHISPER", nil, character)
+   end
 end
