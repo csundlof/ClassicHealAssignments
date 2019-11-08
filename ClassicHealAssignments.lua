@@ -237,7 +237,7 @@ function CreateChannelDropdown()
    -- looks through channel list to pull the index value & checks the channel in the list
    local channels = GetAllChannelNames()
    for channelName, selected in pairs(selectedChannels) do
-      if activeChannels ~= nill then
+      if activeChannels ~= nil then
          dropdown:SetItemValue(table.indexOf(channels, channelName), true)
       end
    end
@@ -390,9 +390,6 @@ function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
                   table.insert(replyAssignment, target)
             end
          end
-      SendChatMessage("You are assigned to: " .. table.concat(replyAssignment, ", "), "WHISPER", nil, character)
-   end
-   return classes, roles 
       SendChatMessage("You are assigned to: " .. table.concat(GetAssignmentsForPlayer(characterParse), ", "), "WHISPER", nil, character)
    end
 end
