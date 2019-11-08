@@ -379,7 +379,6 @@ function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
          for target, healers in pairs(assignedHealers) do
             if healers[characterParse] ~= nil then  
                   table.insert(replyAssignment, target)
-               end
             end
          end
       SendChatMessage("You are assigned to: " .. table.concat(replyAssignment, ", "), "WHISPER", nil, character)
