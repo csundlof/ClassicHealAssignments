@@ -51,9 +51,8 @@ end
 
 
 function ClassicHealAssignments:ShowFrame(input)
-   if debug then
-      print("\n-----------\nHEAL")
-   end
+   DebugPrint("\n-----------\nHEAL")
+
    if mainWindow:IsVisible() then
       mainWindow:Hide()
    else
@@ -64,9 +63,8 @@ end
 
 
 function UpdateFrame()
-   if debug then
-      print("\n-----------\nUPDATE")
-   end
+   DebugPrint("\n-----------\nUPDATE")
+
    local roles = {}
    local classes = {}
    local dispellerList = {}
@@ -81,19 +79,26 @@ function UpdateFrame()
       if healerColors[class] ~= nil then
          for _, player in ipairs(players) do
             if playerFrames[player] == nil then
-               local nameframe = AceGUI:Create("InteractiveLabel")
-               nameframe:SetRelativeWidth(1)
-               nameframe:SetText(player)
+               local nameFrame = AceGUI:Create("InteractiveLabel")
+               nameFrame:SetRelativeWidth(1)
                local classColors = healerColors[class]
-               nameframe:SetColor(classColors[1], classColors[2], classColors[3])
-               playerFrames[player] = nameframe
-               healerGroup:AddChild(nameframe)
+               nameFrame:SetColor(classColors[1], classColors[2], classColors[3])
+               playerFrames[player] = nameFrame
+               healerGroup:AddChild(nameFrame)
             end
+
+            local playerFrameText = player
+
+            if not table.isEmpty(GetAssignmentsForPlayer(player)) then
+               playerFrameText = playerFrameText .. "(X)"
+            end
+
+            playerFrames[player]:SetText(playerFrameText)
+
             tinsert(healerList, player)
             tinsert(dispellerList, player)
-            if debug then
-               print(player)
-            end
+
+            DebugPrint(player)
          end
       elseif class == "Mage" then
          for _, player in ipairs(players) do
@@ -108,9 +113,7 @@ function UpdateFrame()
             if assignmentGroups[player] == nil then
                CreateAssignmentGroup(player, healerList)
             end
-            if debug then
-               print(player)
-            end
+            DebugPrint(player)
          end
       elseif role == "RAID" then
          if assignmentGroups[role] == nil then
@@ -129,23 +132,21 @@ function UpdateFrame()
 end
 
 
-function AssignHealer(widget, event, key, checked, healerList)
-   local target = widget:GetUserData("target")
-   if not assignedHealers[target] then
-      assignedHealers[target] = {}
-      if debug then
-         print("creating assigned healers dict")
-      end
+function AssignHealer(widget, event, key, checked, healerList, assignment)
+   if not assignedHealers[assignment] then
+      assignedHealers[assignment] = {}
+      DebugPrint("creating assigned healers dict")
    end
    if checked then
-      if debug then
-         print("assigning " .. healerList[key] .. " to " .. target)
-      end
-      tinsert(assignedHealers[target], healerList[key])
+      DebugPrint("assigning " .. healerList[key] .. " to " .. assignment)
+
+      tinsert(assignedHealers[assignment], healerList[key])
    else
-      local healerIndex = table.indexOf(assignedHealers[target], healerList[key])
-      tremove(assignedHealers[target], healerIndex)
+      local healerIndex = table.indexOf(assignedHealers[assignment], healerList[key])
+      tremove(assignedHealers[assignment], healerIndex)
    end
+
+   UpdateFrame()
 end
 
 
@@ -165,16 +166,15 @@ end
 
 
 function AnnounceHealers()
-   if debug then
-      print("\n-----------\nASSIGNMENTS")
-   end
+   DebugPrint("\n-----------\nASSIGNMENTS")
+
    AnnounceAssignments("Healing Assignments")
    for target, healers in pairs(assignedHealers) do
       if healers ~= nil then
          local assignment = target ..': ' .. table.concat(healers, ", ")
-         if debug then
-            print(assignment)
-         end
+
+         DebugPrint(assignment)
+
          AnnounceAssignments(assignment)
       end
    end
@@ -182,15 +182,14 @@ end
 
 
 function CreateAssignmentGroup(assignment, playerList)
-   local nameframe = AceGUI:Create("InlineGroup")
-   nameframe:SetTitle(assignment)
-   nameframe:SetWidth(140)
-   assignmentGroups[assignment] = nameframe
-   assignmentWindow:AddChild(nameframe)
+   local nameFrame = AceGUI:Create("InlineGroup")
+   nameFrame:SetTitle(assignment)
+   nameFrame:SetWidth(140)
+   assignmentGroups[assignment] = nameFrame
+   assignmentWindow:AddChild(nameFrame)
    local dropdown = CreateHealerDropdown(playerList, assignment)
-   dropdown:SetUserData("target", assignment)
-   dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) AssignHealer(widget, event, key, checked, playerList) end)
-   nameframe:AddChild(dropdown)
+   dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) AssignHealer(widget, event, key, checked, playerList, assignment) end)
+   nameFrame:AddChild(dropdown)
 end
 
 
@@ -219,7 +218,7 @@ function SelectChannel(widget, event, key, checked)
    if debug then
       print("Selected channels:")
       for ch, id in pairs(selectedChannels) do
-         print("ch="..ch.." id="..id)
+         print("ch=" .. ch .. " id=" .. id)
       end
    end
 end
@@ -231,7 +230,7 @@ function CreateChannelDropdown()
    dropdown:SetList(channels)
    dropdown:SetLabel("Announcement channels")
    dropdown:SetText("Select channels")
-   dropdown:SetWidth(100)
+   dropdown:SetWidth(140)
    dropdown:SetMultiselect(true)
    dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) SelectChannel(widget, event, key, checked) end)
 
@@ -330,7 +329,7 @@ end
 function SetupFrameContainers()
    healerGroup = AceGUI:Create("InlineGroup")
    healerGroup:SetTitle("Healers")
-   healerGroup:SetWidth(80)
+   healerGroup:SetWidth(90)
    mainWindow:AddChild(healerGroup)
 
    assignmentWindow = AceGUI:Create("InlineGroup")
@@ -363,14 +362,11 @@ function GetRaidRoster()
             roles[role] = {}
          end
 
-         if debug then
-            print(role)
-         end
+         DebugPrint(role)
 
          if not tContains(classes[class], name) then
-            if debug then
-               print(name .. " was added")
-            end
+            DebugPrint(name .. " was added")
+
             tinsert(classes[class], name)
             if role ~= nil then
                tinsert(roles[role], name)
@@ -397,4 +393,19 @@ function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
       SendChatMessage("You are assigned to: " .. table.concat(replyAssignment, ", "), "WHISPER", nil, character)
    end
    return classes, roles 
+      SendChatMessage("You are assigned to: " .. table.concat(GetAssignmentsForPlayer(characterParse), ", "), "WHISPER", nil, character)
+   end
+end
+
+
+function GetAssignmentsForPlayer(player)
+   local assignments = {}
+
+   for target, healers in pairs(assignedHealers) do
+      if tContains(healers, player) then
+         table.insert(assignments, target)
+      end
+   end
+
+   return assignments
 end
