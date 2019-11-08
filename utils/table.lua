@@ -47,3 +47,9 @@ function table.getKeys(table)
    end
    return keys
 end
+
+
+-- Returns true if the table is empty
+function table.isEmpty(table)
+   return next(table) == nil
+end
