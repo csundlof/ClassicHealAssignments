@@ -376,14 +376,12 @@ function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
    
    if msg == "heal" and UnitInRaid(characterParse) then
       local replyAssignment = {}
-	     for target, healers in pairs(assignedHealers) do
-		    if healers[player] ~= nil then
-			   if player == characterParse then
-			      table.insert(replyAssignment, target)
-				     break
+         for target, healers in pairs(assignedHealers) do
+            if healers[characterParse] ~= nil then  
+                  table.insert(replyAssignment, target)
                end
             end
-		 end
+         end
       SendChatMessage("You are assigned to: " .. table.concat(replyAssignment, ", "), "WHISPER", nil, character)
    end
 end
