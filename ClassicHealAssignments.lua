@@ -368,23 +368,22 @@ function GetRaidRoster()
    return classes, roles
 end
 
---listens for 'heal' and replies the target's current healing assignments if any
---only replies if character is in raid
+-- listens for 'heal' and replies the target's current healing assignments if any
+-- only replies if character is in raid
 function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
-	--chopping off server tag that comes with character to parse it more easily
-	local characterParse = string.sub(character, 0, (string.find(character, "-") - 1))
-	
-	if msg == "heal" and UnitInRaid(characterParse) then
-		local replyAssignment = {}
-		for target, healers in pairs(assignedHealers) do
-			for i, player in ipairs(healers) do
-				if player == characterParse then
-					table.insert(replyAssignment, target)
-					break
-				end
-			end
-		end
-
-		SendChatMessage("You are assigned to: " .. table.concat(replyAssignment, ", "), "WHISPER", nil, character)
-	end
+   -- chopping off server tag that comes with character to parse it more easily
+   local characterParse = string.gsub(character, "-(.*)", "")
+   
+   if msg == "heal" and UnitInRaid(characterParse) then
+      local replyAssignment = {}
+	     for target, healers in pairs(assignedHealers) do
+		    if healers[player] ~= nil then
+			   if player == characterParse then
+			      table.insert(replyAssignment, target)
+				     break
+               end
+            end
+		 end
+      SendChatMessage("You are assigned to: " .. table.concat(replyAssignment, ", "), "WHISPER", nil, character)
+   end
 end
