@@ -16,7 +16,7 @@ local healerColors = {["Druid"] = {1.00, 0.49, 0.04}, ["Priest"] = {1.00, 1.00, 
 local defaultChannels = {"SAY", "PARTY", "GUILD", "OFFICER", "YELL", "RAID", "RAID_WARNING"}
 local activeChannels = {}
 local channelDropdown = nil
-local selectedChannels = {}
+local selectedChannels = {["RAID"] = "default"}
 
 function ClassicHealAssignments:OnInitialize()
       ClassicHealAssignments:RegisterChatCommand("heal", "ShowFrame")
@@ -234,6 +234,15 @@ function CreateChannelDropdown()
    dropdown:SetWidth(100)
    dropdown:SetMultiselect(true)
    dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) SelectChannel(widget, event, key, checked) end)
+
+   print("value of selected channels: " .. table.concat(selectedChannels, ","))
+   if selectedChannels ~= nil then
+      print("selected channels are not nil!")
+      for v,_ in ipairs(selectedChannels) do
+         print("pushing v..." .. v)
+         dropdown:SetItemValue(table.indexOf(v), true)
+      end
+   end
    return dropdown
 end
 
@@ -252,7 +261,7 @@ end
 
 function UpdateChannels()
    activeChannels = {}
-   selectedChannels = {}
+   print("selected channels b4 update: " .. table.concat(selectedChannels, ","))
    local channels = {GetChannelList()} --returns triads of values: id,name,disabled
    local blizzChannels = {EnumerateServerChannels()}
    for i = 1, table.getn(channels), 3 do
@@ -262,9 +271,14 @@ function UpdateChannels()
          if not tContains(blizzChannels, prunedName) then
             activeChannels[name] = id
          end
+      else --only cleans selectedChannels if the channel name was removed from the list
+        if selectedChannels[name] ~= nil then
+            selectedChannels[name] = nil
+        end
       end
-
    end
+
+   print("selected channels after update: " .. table.concat(selectedChannels, ","))
 end
 
 
@@ -285,6 +299,9 @@ function ClassicHealAssignments:HandleChannelUpdate()
       local channels = GetAllChannelNames()
       channelDropdown:SetList(channels)
    end
+   CleanupFrame()
+   SetupFrameContainers()
+   UpdateFrame()
 end
 
 
@@ -364,7 +381,6 @@ function GetRaidRoster()
          end
       end
    end
-
    return classes, roles
 end
 
@@ -383,4 +399,5 @@ function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
          end
       SendChatMessage("You are assigned to: " .. table.concat(replyAssignment, ", "), "WHISPER", nil, character)
    end
+   return classes, roles 
 end
