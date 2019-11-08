@@ -71,25 +71,22 @@ function UpdateFrame()
    local dispellerList = {}
    local healerList = {}
 
-   local presetName --used to iterate through preset list
-
    classes, roles = GetRaidRoster()
 
    roles["DISPELS"] = {"DISPELS"}
    roles["RAID"] = {"RAID"}
 
-
    for class, players in pairs(classes) do
       if healerColors[class] ~= nil then
          for _, player in ipairs(players) do
             if playerFrames[player] == nil then
-               local nameframe = AceGUI:Create("InteractiveLabel")
-               nameframe:SetRelativeWidth(1)
-               nameframe:SetText(player)
+               local nameFrame = AceGUI:Create("InteractiveLabel")
+               nameFrame:SetRelativeWidth(1)
+               nameFrame:SetText(player)
                local classColors = healerColors[class]
-               nameframe:SetColor(classColors[1], classColors[2], classColors[3])
-               playerFrames[player] = nameframe
-               healerGroup:AddChild(nameframe)
+               nameFrame:SetColor(classColors[1], classColors[2], classColors[3])
+               playerFrames[player] = nameFrame
+               healerGroup:AddChild(nameFrame)
             end
             tinsert(healerList, player)
             tinsert(dispellerList, player)
@@ -126,7 +123,7 @@ function UpdateFrame()
    end
 
 
-   AssignmentPresetsUpdatePresets(assignedHealers)
+   AssignmentPresetsUpdatePresets()
 
    -- calling twice to avoid inconsistencies between re-renders
    mainWindow:DoLayout()

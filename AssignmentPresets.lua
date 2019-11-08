@@ -6,7 +6,7 @@ local AceGUI = LibStub("AceGUI-3.0")
 -- variables to store presets
 local presetList = {}
 local presetFrames = {}
-local presetStore = "Default"
+local selectedPreset = "Default"
 local presetEditBoxText = "Preset Name"
 
 -- Sets up the Save & Delete buttons as well as the preset container; loads components onto the frame
@@ -23,54 +23,57 @@ function AssignmentPresetsSetupFrameContainers(frame)
    presetMaster:AddChild(presetGroup)
 
    -- saves the state of all healer assignments
-   local savestateButton = AceGUI:Create("Button")
-   savestateButton:SetText("Save")
-   savestateButton:SetRelativeWidth(1)
-   savestateButton:SetCallback("OnClick", function () SaveState(presetStore) end)
-   presetMaster:AddChild(savestateButton)
+   local savePresetButton = AceGUI:Create("Button")
+   savePresetButton:SetText("Save")
+   savePresetButton:SetRelativeWidth(1)
+   savePresetButton:SetCallback("OnClick", function () SavePreset(selectedPreset) end)
+   presetMaster:AddChild(savePresetButton)
 
    -- deletes the currently selected preset
-   local deletestateButton = AceGUI:Create("Button")
-   deletestateButton:SetText("Delete")
-   deletestateButton:SetRelativeWidth(1)
-   deletestateButton:SetCallback("OnClick", function() DeleteState(presetStore) end)
-   presetMaster:AddChild(deletestateButton)
+   local deletePresetButton = AceGUI:Create("Button")
+   deletePresetButton:SetText("Delete")
+   deletePresetButton:SetRelativeWidth(1)
+   deletePresetButton:SetCallback("OnClick", function() DeletePreset(selectedPreset) end)
+   presetMaster:AddChild(deletePresetButton)
    
    -- text box to hold the preset name
-   savestateNameBox = AceGUI:Create("EditBox")
-   savestateNameBox:SetRelativeWidth(1)
-   savestateNameBox:SetLabel("Preset Name")
-   savestateNameBox:SetText(presetEditBoxText)
-   savestateNameBox:SetCallback("OnEnterPressed", function(widget, event, text) presetStore = text end)
-   presetMaster:AddChild(savestateNameBox)
+   presetNameBox = AceGUI:Create("EditBox")
+   presetNameBox:SetRelativeWidth(1)
+   presetNameBox:SetLabel("Preset Name")
+   presetNameBox:SetText(presetEditBoxText)
+   presetNameBox:SetCallback("OnEnterPressed", function(widget, event, text) selectedPreset = text end)
+   presetMaster:AddChild(presetNameBox)
 end
+
 
 -- add preset names to container
 function AssignmentPresetsUpdatePresets()
    if presetList ~= nil then
       for presetName, assignments in pairs(presetList) do 
          if presetFrames[presetName] == nil then
-               local nameframe = AceGUI:Create("InteractiveLabel")
-               nameframe:SetRelativeWidth(1)
-               nameframe:SetText(presetName)
-            nameframe:SetHighlight(10, 145, 100)
-            nameframe:SetCallback("OnClick", function() LoadState(presetName) end)
-               presetFrames[presetName] = nameframe
+            local nameFrame = AceGUI:Create("InteractiveLabel")
+            nameFrame:SetRelativeWidth(1)
+            nameFrame:SetText(presetName)
+            nameFrame:SetHighlight(10, 145, 100)
+            nameFrame:SetCallback("OnClick", function() LoadPreset(presetName) end)
+            presetFrames[presetName] = nameframe
             presetGroup:AddChild(nameframe)
          end
       end
    end
 end
 
+
 -- called during CleanupFrames() in main
 function AssignmentPresetsCleanup()
    presetFrames = {}
 end
 
+
 -- Saves the current status of healers & their target
-function SaveState(name)
+function SavePreset(name)
    if debug then
-      print("\n-----------\nSAVESTATE")
+      print("\n-----------\nSavePreset")
    end
 
    presetEditBoxText = name
@@ -78,35 +81,38 @@ function SaveState(name)
    presetList[name] = CopyArray(assignedHealers)
 
    CleanupFrame()
-    SetupFrameContainers()
-    UpdateFrame()
+   SetupFrameContainers()
+   UpdateFrame()
 end
 
---Loads the state saved under the preset list
-function LoadState(name)
+
+--  Loads the state saved under the preset list
+function LoadPreset(name)
    if debug then
-      print("\n-----------\nLOADSTATE")
+      print("\n-----------\nLoadPreset")
    end
 
    presetEditBoxText = name
-   presetStore = name
+   selectedPreset = name
    assignedHealers = {}
    assignedHealers = CopyArray(presetList[name])
    CleanupFrame()
-    SetupFrameContainers()
-    UpdateFrame()
+   SetupFrameContainers()
+   UpdateFrame()
 end
 
+
 -- deletes the preset with the current name in the edit text box
-function DeleteState(name)
+function DeletePreset(name)
    if debug then
-      print("\n-----------\nDELETESTATE")
+      print("\n-----------\nDeletePreset")
    end
    presetList[name] = nil
    CleanupFrame()
    SetupFrameContainers()
    UpdateFrame()
 end
+
 
 function CopyArray(array)
    local copyTargets = {}
