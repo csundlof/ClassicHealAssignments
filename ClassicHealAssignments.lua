@@ -80,7 +80,6 @@ function UpdateFrame()
             if playerFrames[player] == nil then
                local nameFrame = AceGUI:Create("InteractiveLabel")
                nameFrame:SetRelativeWidth(1)
-               nameFrame:SetText(player)
                local classColors = healerColors[class]
                nameFrame:SetColor(classColors[1], classColors[2], classColors[3])
                playerFrames[player] = nameFrame
