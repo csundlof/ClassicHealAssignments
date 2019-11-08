@@ -16,7 +16,7 @@ local healerColors = {["Druid"] = {1.00, 0.49, 0.04}, ["Priest"] = {1.00, 1.00, 
 local defaultChannels = {"SAY", "PARTY", "GUILD", "OFFICER", "YELL", "RAID", "RAID_WARNING"}
 local activeChannels = {}
 local channelDropdown = nil
-local selectedChannels = {}
+local selectedChannels = {["RAID"] = "default"}
 
 function ClassicHealAssignments:OnInitialize()
       ClassicHealAssignments:RegisterChatCommand("heal", "ShowFrame")
@@ -260,10 +260,10 @@ function UpdateChannels()
          if not tContains(blizzChannels, prunedName) then
             activeChannels[name] = id
          end
-	  else --only cleans selectedChannels if the channel name was removed from the list
-		if selectedChannels[name] ~= nil then
-			selectedChannels[name] = nil
-		end
+      else --only cleans selectedChannels if the channel name was removed from the list
+        if selectedChannels[name] ~= nil then
+            selectedChannels[name] = nil
+        end
       end
 
    end
