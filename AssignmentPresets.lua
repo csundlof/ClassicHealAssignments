@@ -56,8 +56,8 @@ function AssignmentPresetsUpdatePresets()
             nameFrame:SetText(presetName)
             nameFrame:SetHighlight(10, 145, 100)
             nameFrame:SetCallback("OnClick", function() LoadPreset(presetName) end)
-            presetFrames[presetName] = nameframe
-            presetGroup:AddChild(nameframe)
+            presetFrames[presetName] = nameFrame
+            presetGroup:AddChild(nameFrame)
          end
       end
    end
