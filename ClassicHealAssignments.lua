@@ -13,6 +13,10 @@ local roles = {}
 
 local healerColors = {["Druid"] = {1.00, 0.49, 0.04}, ["Priest"] = {1.00, 1.00, 1.00}, ["Paladin"] = {0.96, 0.55, 0.73}, ["Shaman"] = {0.96, 0.55, 0.73}}
 
+local defaultChannels = {"SAY", "PARTY", "GUILD", "OFFICER", "YELL", "RAID", "RAID_WARNING"}
+local activeChannels = {}
+local channelDropdown = nil
+local selectedChannels = {}
 
 function ClassicHealAssignments:OnInitialize()
       ClassicHealAssignments:RegisterChatCommand("heal", "ShowFrame")
@@ -20,6 +24,7 @@ end
 
 
 function ClassicHealAssignments:OnEnable()
+      UpdateChannels()
       SetupFrame()
       SetupFrameContainers()
       UpdateFrame()
@@ -38,7 +43,9 @@ end
 
 function RegisterEvents()
    -- Listen for changes in raid roster
+   ClassicHealAssignments:RegisterEvent("CHANNEL_UI_UPDATE", "HandleChannelUpdate")
    ClassicHealAssignments:RegisterEvent("GROUP_ROSTER_UPDATE", "HandleRosterChange")
+   ClassicHealAssignments:RegisterEvent("CHAT_MSG_WHISPER", "ReplyWithAssignment")
 end
 
 
@@ -131,7 +138,7 @@ function AssignHealer(widget, event, key, checked, healerList)
    local target = widget:GetUserData("target")
    if not assignedHealers[target] then
       assignedHealers[target] = {}
-      if debug then 
+      if debug then
          print("creating assigned healers dict")
       end
    end
@@ -165,14 +172,14 @@ function AnnounceHealers()
    if debug then
       print("\n-----------\nASSIGNMENTS")
    end
-   SendChatMessage("Healing assignments", "RAID", nil)
+   AnnounceAssignments("Healing Assignments")
    for target, healers in pairs(assignedHealers) do
       if healers ~= nil then
          local assignment = target ..': ' .. table.concat(healers, ", ")
          if debug then
             print(assignment)
          end
-         SendChatMessage(assignment, "RAID", nil)
+         AnnounceAssignments(assignment)
       end
    end
 end
@@ -196,6 +203,91 @@ function ClassicHealAssignments:HandleRosterChange()
       CleanupFrame()
       SetupFrameContainers()
       UpdateFrame()
+   end
+end
+
+
+function SelectChannel(widget, event, key, checked)
+   local channels = GetAllChannelNames()
+   local s = channels[key]
+   if checked then
+      if key <= #defaultChannels then
+         selectedChannels[s] = "default"
+      else
+         selectedChannels[s] = activeChannels[s]
+      end
+   else
+      selectedChannels[s] = nil
+   end
+
+   if debug then
+      print("Selected channels:")
+      for ch, id in pairs(selectedChannels) do
+         print("ch="..ch.." id="..id)
+      end
+   end
+end
+
+
+function CreateChannelDropdown()
+   local dropdown = AceGUI:Create("Dropdown")
+   local channels = GetAllChannelNames()
+   dropdown:SetList(channels)
+   dropdown:SetLabel("Announcement channels")
+   dropdown:SetText("Select channels")
+   dropdown:SetWidth(100)
+   dropdown:SetMultiselect(true)
+   dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) SelectChannel(widget, event, key, checked) end)
+   return dropdown
+end
+
+
+-- Sends MSG to preselected channels
+function AnnounceAssignments(msg)
+   for ch, id in pairs(selectedChannels) do
+      if id == "default" then
+         SendChatMessage(msg, ch, nil)
+      else
+         SendChatMessage(msg, "CHANNEL", nil, id)
+      end
+   end
+end
+
+
+function UpdateChannels()
+   activeChannels = {}
+   selectedChannels = {}
+   local channels = {GetChannelList()} --returns triads of values: id,name,disabled
+   local blizzChannels = {EnumerateServerChannels()}
+   for i = 1, table.getn(channels), 3 do
+      local id, name = GetChannelName(channels[i])
+      if name ~= nil then
+         local prunedName = string.match(name, "(%w+)") --filter out blizzard channels
+         if not tContains(blizzChannels, prunedName) then
+            activeChannels[name] = id
+         end
+      end
+
+   end
+end
+
+
+function GetAllChannelNames()
+   local names = {}
+   table.merge(names, defaultChannels)
+   table.merge(names, table.getKeys(activeChannels))
+   return names
+end
+
+
+function ClassicHealAssignments:HandleChannelUpdate()
+   UpdateChannels()
+   if debug then
+      print(unpack(selectedChannels))
+   end
+   if channelDropdown ~= nil then
+      local channels = GetAllChannelNames()
+      channelDropdown:SetList(channels)
    end
 end
 
@@ -245,6 +337,8 @@ function SetupFrameContainers()
    announceButton:SetCallback("OnClick", function() AnnounceHealers() end)
    mainWindow:AddChild(announceButton)
 
+   channelDropdown = CreateChannelDropdown()
+   mainWindow:AddChild(channelDropdown)
 end
 
 
@@ -262,7 +356,7 @@ function GetRaidRoster()
             roles[role] = {}
          end
 
-         if debug then 
+         if debug then
             print(role)
          end
 
@@ -279,4 +373,21 @@ function GetRaidRoster()
    end
 
    return classes, roles
+end
+
+-- listens for 'heal' and replies the target's current healing assignments if any
+-- only replies if character is in raid
+function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
+   -- chopping off server tag that comes with character to parse it more easily
+   local characterParse = string.gsub(character, "-(.*)", "")
+   
+   if msg == "heal" and UnitInRaid(characterParse) then
+      local replyAssignment = {}
+         for target, healers in pairs(assignedHealers) do
+            if healers[characterParse] ~= nil then  
+                  table.insert(replyAssignment, target)
+            end
+         end
+      SendChatMessage("You are assigned to: " .. table.concat(replyAssignment, ", "), "WHISPER", nil, character)
+   end
 end
