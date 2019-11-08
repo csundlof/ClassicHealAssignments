@@ -113,7 +113,7 @@ function DeletePreset(name)
    UpdateFrame()
 end
 
-
+-- TODO #14: make this generic and move into table.lua
 function CopyArray(array)
    local copyTargets = {}
    for target, healers in pairs(array) do
