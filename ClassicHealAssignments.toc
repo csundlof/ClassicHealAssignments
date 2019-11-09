@@ -6,5 +6,6 @@
 embeds.xml
 
 ClassicHealAssignments.lua
+AssignmentPresets.lua
 utils\table.lua
 utils\helpers.lua
