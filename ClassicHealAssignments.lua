@@ -37,7 +37,6 @@ function ClassicHealAssignments:OnEnable()
       end
 end
 
-
 function ClassicHealAssignments:OnDisable()
 end
 
@@ -166,7 +165,6 @@ function CreateHealerDropdown(healers, assignment)
    end
    return dropdown
 end
-
 
 function AnnounceHealers()
    DebugPrint("\n-----------\nASSIGNMENTS")
