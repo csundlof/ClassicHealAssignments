@@ -72,9 +72,7 @@ end
 
 -- Saves the current status of healers & their target
 function SavePreset(name)
-   if debug then
-      print("\n-----------\nSavePreset")
-   end
+   DebugPrint("\n-----------\nSavePreset")
 
    presetEditBoxText = name
    presetList[name] = {}
@@ -88,9 +86,7 @@ end
 
 --  Loads the state saved under the preset list
 function LoadPreset(name)
-   if debug then
-      print("\n-----------\nLoadPreset")
-   end
+   DebugPrint("\n-----------\nLoadPreset")
 
    presetEditBoxText = name
    selectedPreset = name
@@ -104,9 +100,7 @@ end
 
 -- deletes the preset with the current name in the edit text box
 function DeletePreset(name)
-   if debug then
-      print("\n-----------\nDeletePreset")
-   end
+   DebugPrint("\n-----------\nDeletePreset")
    presetList[name] = nil
    CleanupFrame()
    SetupFrameContainers()
