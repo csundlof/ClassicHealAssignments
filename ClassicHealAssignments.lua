@@ -320,10 +320,27 @@ end
 
 
 function SetupFrame()
+   AceGUI:RegisterLayout("Custom_Layout",
+
+   function(content, children)
+      for i = 1, #children do
+            local child = children[i]
+            local frame = child.frame
+            
+            if i == 1 then
+               child:SetPoint("TOPLEFT",content,"TOPLEFT",0,0)
+            elseif i == 4 then
+               child:SetPoint("BOTTOMRIGHT", content, "BOTTOMRIGHT", -100,-25)
+            else 
+               child:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, 0)
+            end
+      end
+   end)
+
    mainWindow = AceGUI:Create("Frame")
    mainWindow:SetTitle("Classic Heal Assignments")
    mainWindow:SetStatusText("Classic Heal Assignments")
-   mainWindow:SetLayout("Flow")
+   mainWindow:SetLayout("Custom_Layout")
    mainWindow:SetWidth("1000")
 end
 
