@@ -36,8 +36,8 @@ function uiRegisterCustomLayouts()
                   child:SetPoint("TOP",content,"TOP", 0, 5)
                elseif child:GetUserData("name") == "announceButton" then
                   child:SetPoint("TOP",content,"BOTTOM",0,25)
-               end
             end
          end
-	   end)
+      end
+   end)
 end

@@ -25,17 +25,17 @@ end
 
 
 function ClassicHealAssignments:OnEnable()
-      UpdateChannels()
-      SetupFrame()
-      SetupFrameContainers()
-      UpdateFrame()
-      RegisterEvents()
+   UpdateChannels()
+   SetupFrame()
+   SetupFrameContainers()
+   UpdateFrame()
+   RegisterEvents()
 
-      debug = false
+   debug = false
 
-      if not debug then
-         mainWindow:Hide()
-      end
+   if not debug then
+      mainWindow:Hide()
+   end
 end
 
 function ClassicHealAssignments:OnDisable()
@@ -175,6 +175,7 @@ function CreateHealerDropdown(healers, assignment)
    end
    return dropdown
 end
+
 
 function AnnounceHealers()
    DebugPrint("\n-----------\nASSIGNMENTS")
@@ -355,7 +356,6 @@ end
 
 
 function SetupFrameContainers()
-   local widgetName = "name"
 
    healerGroup = AceGUI:Create("InlineGroup")
    healerGroup:SetTitle("Healers")
