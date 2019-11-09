@@ -6,7 +6,7 @@ local playerFrames = {}
 
 local assignmentGroups = {}
 
-local assignedHealers = {}
+assignedHealers = {}
 
 local classes = {}
 local roles = {}
@@ -36,7 +36,6 @@ function ClassicHealAssignments:OnEnable()
          mainWindow:Hide()
       end
 end
-
 
 function ClassicHealAssignments:OnDisable()
 end
@@ -126,6 +125,9 @@ function UpdateFrame()
       end
    end
 
+
+   AssignmentPresetsUpdatePresets()
+
    -- calling twice to avoid inconsistencies between re-renders
    mainWindow:DoLayout()
    mainWindow:DoLayout()
@@ -163,7 +165,6 @@ function CreateHealerDropdown(healers, assignment)
    end
    return dropdown
 end
-
 
 function AnnounceHealers()
    DebugPrint("\n-----------\nASSIGNMENTS")
@@ -299,6 +300,7 @@ function CleanupFrame()
 
    assignmentGroups = {}
    playerFrames = {}
+   AssignmentPresetsCleanup()
    mainWindow:ReleaseChildren()
 end
 
@@ -323,6 +325,8 @@ function SetupFrameContainers()
    assignmentWindow:SetRelativeWidth(0.9)
    assignmentWindow:SetLayout("Flow")
    mainWindow:AddChild(assignmentWindow)
+
+   AssignmentPresetsSetupFrameContainers(mainWindow, assignedHealers)
 
    local announceButton = AceGUI:Create("Button")
    announceButton:SetText("Announce assignments")
