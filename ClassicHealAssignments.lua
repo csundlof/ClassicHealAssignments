@@ -7,13 +7,14 @@ local playerFrames = {}
 local assignmentGroups = {}
 
 assignedHealers = {}
+local reverseAssignments = {}
 
 local classes = {}
 local roles = {}
 
 local healerColors = {["Druid"] = {1.00, 0.49, 0.04}, ["Priest"] = {1.00, 1.00, 1.00}, ["Paladin"] = {0.96, 0.55, 0.73}, ["Shaman"] = {0.96, 0.55, 0.73}}
 
-local defaultChannels = {"SAY", "PARTY", "GUILD", "OFFICER", "YELL", "RAID", "RAID_WARNING"}
+local defaultChannels = {"SAY", "PARTY", "WHISPER", "GUILD", "OFFICER", "YELL", "RAID", "RAID_WARNING"}
 local activeChannels = {}
 local channelDropdown = nil
 local selectedChannels = {["RAID"] = "default"}
@@ -139,13 +140,22 @@ function AssignHealer(widget, event, key, checked, healerList, assignment)
       assignedHealers[assignment] = {}
       DebugPrint("creating assigned healers dict")
    end
+   if not reverseAssignments[healerList[key]] then
+     reverseAssignments[healerList[key]] = {}
+   end
    if checked then
       DebugPrint("assigning " .. healerList[key] .. " to " .. assignment)
 
+      tinsert(reverseAssignments[healerList[key]], assignment)
       tinsert(assignedHealers[assignment], healerList[key])
    else
       local healerIndex = table.indexOf(assignedHealers[assignment], healerList[key])
       tremove(assignedHealers[assignment], healerIndex)
+      local assignmentIndex = table.indexOf(reverseAssignments[healerList[key]], assignment)
+      tremove(reverseAssignments[healerList[key]], assignmentIndex)
+      if table.isEmpty(reverseAssignments[healerList[key]]) then
+        reverseAssignments[healerList[key]] = nil
+      end
    end
 
    UpdateFrame()
@@ -178,6 +188,10 @@ function AnnounceHealers()
 
          AnnounceAssignments(assignment)
       end
+   end
+
+   if selectedChannels["WHISPER"] ~= nil then
+     AnnounceWhispers()
    end
 end
 
@@ -251,12 +265,21 @@ end
 -- Sends MSG to preselected channels
 function AnnounceAssignments(msg)
    for ch, id in pairs(selectedChannels) do
-      if id == "default" then
+      if id == "default" and ch ~= "WHISPER" then
          SendChatMessage(msg, ch, nil)
       else
          SendChatMessage(msg, "CHANNEL", nil, id)
       end
    end
+end
+
+
+-- Sends assignments to all assigned players in a whisper
+function AnnounceWhispers()
+    for healer, a in pairs(reverseAssignments) do
+      local msg = "Your healing assignments: "..table.concat(a, ", ")
+      SendChatMessage(msg, "WHISPER", nil, healer)
+    end
 end
 
 
@@ -406,7 +429,6 @@ end
 function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
    -- chopping off server tag that comes with character to parse it more easily
    local characterParse = string.gsub(character, "-(.*)", "")
-   
    if msg == "heal" and UnitInRaid(characterParse) then
       SendChatMessage("You are assigned to: " .. table.concat(GetAssignmentsForPlayer(characterParse), ", "), "WHISPER", nil, character)
    end
@@ -414,13 +436,9 @@ end
 
 
 function GetAssignmentsForPlayer(player)
-   local assignments = {}
-
-   for target, healers in pairs(assignedHealers) do
-      if tContains(healers, player) then
-         table.insert(assignments, target)
-      end
+   if reverseAssignments[player] ~= nil then
+      return reverseAssignments[player]
+   else
+      return {}
    end
-
-   return assignments
 end
