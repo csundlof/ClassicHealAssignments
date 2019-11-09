@@ -16,7 +16,7 @@ local healerColors = {["Druid"] = {1.00, 0.49, 0.04}, ["Priest"] = {1.00, 1.00, 
 local defaultChannels = {"SAY", "PARTY", "GUILD", "OFFICER", "YELL", "RAID", "RAID_WARNING"}
 local activeChannels = {}
 local channelDropdown = nil
-local selectedChannels = {}
+local selectedChannels = {["RAID"] = "default"}
 
 function ClassicHealAssignments:OnInitialize()
       ClassicHealAssignments:RegisterChatCommand("heal", "ShowFrame")
@@ -36,6 +36,7 @@ function ClassicHealAssignments:OnEnable()
          mainWindow:Hide()
       end
 end
+
 
 function ClassicHealAssignments:OnDisable()
 end
@@ -166,6 +167,7 @@ function CreateHealerDropdown(healers, assignment)
    return dropdown
 end
 
+
 function AnnounceHealers()
    DebugPrint("\n-----------\nASSIGNMENTS")
 
@@ -234,6 +236,15 @@ function CreateChannelDropdown()
    dropdown:SetWidth(140)
    dropdown:SetMultiselect(true)
    dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) SelectChannel(widget, event, key, checked) end)
+
+   -- looks through channel list to pull the index value & checks the channel in the list
+   local channels = GetAllChannelNames()
+   for channelName, selected in pairs(selectedChannels) do
+      if activeChannels ~= nil then
+         dropdown:SetItemValue(table.indexOf(channels, channelName), true)
+      end
+   end
+
    return dropdown
 end
 
@@ -252,7 +263,6 @@ end
 
 function UpdateChannels()
    activeChannels = {}
-   selectedChannels = {}
    local channels = {GetChannelList()} --returns triads of values: id,name,disabled
    local blizzChannels = {EnumerateServerChannels()}
    for i = 1, table.getn(channels), 3 do
@@ -262,8 +272,11 @@ function UpdateChannels()
          if not tContains(blizzChannels, prunedName) then
             activeChannels[name] = id
          end
+      else --only cleans selectedChannels if the channel name was removed from the list
+        if selectedChannels[name] ~= nil then
+            selectedChannels[name] = nil
+        end
       end
-
    end
 end
 
@@ -285,6 +298,9 @@ function ClassicHealAssignments:HandleChannelUpdate()
       local channels = GetAllChannelNames()
       channelDropdown:SetList(channels)
    end
+   CleanupFrame()
+   SetupFrameContainers()
+   UpdateFrame()
 end
 
 
