@@ -14,6 +14,7 @@ function AssignmentPresetsSetupFrameContainers(frame)
    -- places preset container inside of main frame
    presetMaster = AceGUI:Create("SimpleGroup")
    presetMaster:SetWidth(160)
+   presetMaster:SetUserData("name", "presetMaster")
    frame:AddChild(presetMaster)
 
    -- holds all of the preset frames

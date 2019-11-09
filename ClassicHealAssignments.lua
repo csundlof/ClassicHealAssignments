@@ -231,8 +231,9 @@ function CreateChannelDropdown()
    dropdown:SetList(channels)
    dropdown:SetLabel("Announcement channels")
    dropdown:SetText("Select channels")
-   dropdown:SetWidth(140)
+   dropdown:SetWidth(200)
    dropdown:SetMultiselect(true)
+   dropdown:SetUserData("name", "dropdown")
    dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) SelectChannel(widget, event, key, checked) end)
 
    -- looks through channel list to pull the index value & checks the channel in the list
@@ -320,52 +321,52 @@ end
 
 
 function SetupFrame()
-   AceGUI:RegisterLayout("Custom_Layout",
-
-   function(content, children)
-      for i = 1, #children do
-            local child = children[i]
-            local frame = child.frame
-            
-            if i == 1 then
-               child:SetPoint("TOPLEFT",content,"TOPLEFT",0,0)
-            elseif i == 4 then
-               child:SetPoint("BOTTOMRIGHT", content, "BOTTOMRIGHT", -100,-25)
-            else 
-               child:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, 0)
-            end
-      end
-   end)
+   uiRegisterCustomLayouts()
 
    mainWindow = AceGUI:Create("Frame")
    mainWindow:SetTitle("Classic Heal Assignments")
    mainWindow:SetStatusText("Classic Heal Assignments")
-   mainWindow:SetLayout("Custom_Layout")
+   mainWindow:SetLayout("mainWindowLayout")
    mainWindow:SetWidth("1000")
 end
 
 
 function SetupFrameContainers()
+   local widgetName = "name"
+
    healerGroup = AceGUI:Create("InlineGroup")
    healerGroup:SetTitle("Healers")
    healerGroup:SetWidth(90)
+   healerGroup:SetUserData("name", "healerGroup")
    mainWindow:AddChild(healerGroup)
 
    assignmentWindow = AceGUI:Create("InlineGroup")
    assignmentWindow:SetTitle("Assignments")
    assignmentWindow:SetRelativeWidth(0.9)
    assignmentWindow:SetLayout("Flow")
+   assignmentWindow:SetUserData("name", "assignmentWindow")
    mainWindow:AddChild(assignmentWindow)
 
-   AssignmentPresetsSetupFrameContainers(mainWindow, assignedHealers)
+   AssignmentPresetsSetupFrameContainers(mainWindow)
+   
+   announceMaster = AceGUI:Create("SimpleGroup")
+   announceMaster:SetWidth(200)
+   announceMaster:SetHeight(65)
+   announceMaster:SetUserData("name", "announceMaster")
+   announceMaster:SetLayout("AnnouncementsPane")
+   mainWindow:AddChild(announceMaster)
+
+   channelDropdown = CreateChannelDropdown()
+   announceMaster:AddChild(channelDropdown)
 
    local announceButton = AceGUI:Create("Button")
    announceButton:SetText("Announce assignments")
    announceButton:SetCallback("OnClick", function() AnnounceHealers() end)
-   mainWindow:AddChild(announceButton)
+   announceButton:SetHeight(20)
+   announceButton:SetWidth(200)
+   announceButton:SetUserData("name", "announceButton")
+   announceMaster:AddChild(announceButton)
 
-   channelDropdown = CreateChannelDropdown()
-   mainWindow:AddChild(channelDropdown)
 end
 
 
