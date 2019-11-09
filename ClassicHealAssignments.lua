@@ -154,7 +154,7 @@ function AssignHealer(widget, event, key, checked, healerList, assignment)
       tremove(assignedHealers[assignment], healerIndex)
       local assignmentIndex = table.indexOf(reverseAssignments[healerList[key]], assignment)
       tremove(reverseAssignments[healerList[key]], assignmentIndex)
-      if next(reverseAssignments[healerList[key]]) == nil then
+      if table.isEmpty(reverseAssignments[healerList[key]]) then
         reverseAssignments[healerList[key]] = nil
       end
    end
@@ -273,6 +273,7 @@ function AnnounceAssignments(msg)
       end
    end
 end
+
 
 -- Sends assignments to all assigned players in a whisper
 function AnnounceWhispers()
@@ -412,7 +413,6 @@ end
 function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
    -- chopping off server tag that comes with character to parse it more easily
    local characterParse = string.gsub(character, "-(.*)", "")
-
    if msg == "heal" and UnitInRaid(characterParse) then
       SendChatMessage("You are assigned to: " .. table.concat(GetAssignmentsForPlayer(characterParse), ", "), "WHISPER", nil, character)
    end
@@ -420,13 +420,9 @@ end
 
 
 function GetAssignmentsForPlayer(player)
-   local assignments = {}
-
-   for target, healers in pairs(assignedHealers) do
-      if tContains(healers, player) then
-         table.insert(assignments, target)
-      end
+   if reverseAssignments[player] ~= nil then
+      return reverseAssignments[player]
+   else
+      return {}
    end
-
-   return assignments
 end
