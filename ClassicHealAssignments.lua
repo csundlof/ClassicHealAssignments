@@ -37,6 +37,7 @@ function ClassicHealAssignments:OnEnable()
       end
 end
 
+
 function ClassicHealAssignments:OnDisable()
 end
 
@@ -165,6 +166,7 @@ function CreateHealerDropdown(healers, assignment)
    end
    return dropdown
 end
+
 
 function AnnounceHealers()
    DebugPrint("\n-----------\nASSIGNMENTS")
@@ -378,8 +380,10 @@ function GetRaidRoster()
          end
       end
    end
+
    return classes, roles
 end
+
 
 -- listens for 'heal' and replies the target's current healing assignments if any
 -- only replies if character is in raid
@@ -388,12 +392,6 @@ function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
    local characterParse = string.gsub(character, "-(.*)", "")
    
    if msg == "heal" and UnitInRaid(characterParse) then
-      local replyAssignment = {}
-         for target, healers in pairs(assignedHealers) do
-            if healers[characterParse] ~= nil then  
-                  table.insert(replyAssignment, target)
-            end
-         end
       SendChatMessage("You are assigned to: " .. table.concat(GetAssignmentsForPlayer(characterParse), ", "), "WHISPER", nil, character)
    end
 end
