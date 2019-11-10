@@ -79,10 +79,12 @@ function UpdateFrame()
       if healerColors[class] ~= nil then
          for _, player in ipairs(players) do
             if playerFrames[player] == nil then
-               local nameFrame = AceGUI:Create("InteractiveLabel")
+               local nameFrame = AceGUI:Create("DragLabel")
                nameFrame:SetRelativeWidth(1)
                local classColors = healerColors[class]
                nameFrame:SetColor(classColors[1], classColors[2], classColors[3])
+               nameFrame:SetCallback("OnDragStart", function(widget) DragnDrop(widget) end )     --DRAGNDROP CHANGES #1
+               nameFrame:SetCallback("OnDragStop", function(widget) Drop(widget) end)
                playerFrames[player] = nameFrame
                healerGroup:AddChild(nameFrame)
             end
@@ -441,4 +443,15 @@ function GetAssignmentsForPlayer(player)
    else
       return {}
    end
+end
+
+
+function DragnDrop(widget)
+   widget.frame:StartMoving()
+   local cursorX, cursorY = GetCursorPosition()
+   print("in dragndrop")
+end
+
+function Drop(widget)
+   widget.frame:StopMovingOrSizing()
 end
