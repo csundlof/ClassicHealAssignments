@@ -6,3 +6,11 @@ function DebugPrint(text)
       print(text)
    end
 end
+
+
+-- Executes the provided function if debug is set to true
+function DebugFunction(func)
+   if debug then
+      func()
+   end
+end

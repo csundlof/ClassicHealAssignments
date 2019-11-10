@@ -232,12 +232,14 @@ function SelectChannel(widget, event, key, checked)
       selectedChannels[s] = nil
    end
 
-   if debug then
-      print("Selected channels:")
-      for ch, id in pairs(selectedChannels) do
-         print("ch=" .. ch .. " id=" .. id)
+   DebugFunction(
+      function(ch, id)
+         print("Selected channels:")
+         for ch, id in pairs(selectedChannels) do
+            print("ch=" .. ch .. " id=" .. id)
+         end
       end
-   end
+   )
 end
 
 
@@ -314,9 +316,13 @@ end
 
 function ClassicHealAssignments:HandleChannelUpdate()
    UpdateChannels()
-   if debug then
-      print(unpack(selectedChannels))
-   end
+
+   DebugFunction(
+      function()
+         print("Selected announcement channels: " .. table.concat(table.getKeys(selectedChannels), ","))
+      end
+   )
+
    if channelDropdown ~= nil then
       local channels = GetAllChannelNames()
       channelDropdown:SetList(channels)
