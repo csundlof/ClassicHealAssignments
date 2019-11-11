@@ -1,5 +1,20 @@
 local ClassicHealAssignments = LibStub("AceAddon-3.0"):NewAddon("ClassicHealAssignments", "AceConsole-3.0", "AceEvent-3.0");
 local AceGUI = LibStub("AceGUI-3.0")
+local healLDB = LibStub("LibDataBroker-1.1"):NewDataObject("HealAssignments", {
+   type = "launcher",
+   text = "HealAssignments",
+   icon = "135907",
+   OnTooltipShow = function(tooltip)
+	   tooltip:AddLine("ClassicHealAssignments")
+      tooltip:AddLine(format("|cFFC41F3B%s:|r %s", "Click", "Open Assignment Panel"))
+	end,
+   OnClick = function()
+      ClassicHealAssignments:ShowFrame()
+   end,
+})
+local icon = LibStub("LibDBIcon-1.0")
+
+
 local CLASS_ICON_TCOORDS = CLASS_ICON_TCOORDS
 
 local playerFrames = {}
@@ -20,7 +35,15 @@ local channelDropdown = nil
 local selectedChannels = {["RAID"] = "default"}
 
 function ClassicHealAssignments:OnInitialize()
-      ClassicHealAssignments:RegisterChatCommand("heal", "ShowFrame")
+   self.db = LibStub("AceDB-3.0"):New("ClassicHealAssignmentsDB", {
+      profile = {
+         minimap = {
+            hide = false
+         },
+      },
+   })
+   icon:Register("HealAssignments", healLDB, self.db.profile.minimap)
+   ClassicHealAssignments:RegisterChatCommand("heal", "ShowFrame")
 end
 
 
@@ -377,7 +400,7 @@ function SetupFrameContainers()
    mainWindow:AddChild(assignmentWindow)
 
    AssignmentPresetsSetupFrameContainers(mainWindow)
-   
+
    announceMaster = AceGUI:Create("SimpleGroup")
    announceMaster:SetWidth(200)
    announceMaster:SetHeight(65)
