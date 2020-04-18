@@ -4,6 +4,8 @@ local CLASS_ICON_TCOORDS = CLASS_ICON_TCOORDS
 
 local playerFrames = {}
 
+local assignmentDropdownList = {}
+
 local assignmentGroups = {}
 
 assignedHealers = {}
@@ -83,10 +85,14 @@ function UpdateFrame()
                nameFrame:SetRelativeWidth(1)
                local classColors = healerColors[class]
                nameFrame:SetColor(classColors[1], classColors[2], classColors[3])
+               nameFrame:SetUserData("playerName", player)
                nameFrame:SetCallback("OnDragStart", function(widget) DragnDrop(widget) end )     --DRAGNDROP CHANGES #1
-               nameFrame:SetCallback("OnDragStop", function(widget) Drop(widget) end)
+               nameFrame:SetCallback("OnDragStop", function(widget) PlayerFrameDrop(widget) end)
                playerFrames[player] = nameFrame
-               healerGroup:AddChild(nameFrame)
+               local nameContainer = AceGUI:Create("SimpleGroup")
+               nameContainer:SetRelativeWidth(1)
+               nameContainer:AddChild(nameFrame)
+               healerGroup:AddChild(nameContainer)
             end
 
             local playerFrameText = player
@@ -130,6 +136,7 @@ function UpdateFrame()
 
 
    AssignmentPresetsUpdatePresets()
+   UpdateAssignments()
 
    -- calling twice to avoid inconsistencies between re-renders
    mainWindow:DoLayout()
@@ -137,7 +144,7 @@ function UpdateFrame()
 end
 
 
-function AssignHealer(widget, event, key, checked, healerList, assignment)
+function AssignHealer(key, checked, healerList, assignment)
    if not assignedHealers[assignment] then
       assignedHealers[assignment] = {}
       DebugPrint("creating assigned healers dict")
@@ -159,6 +166,8 @@ function AssignHealer(widget, event, key, checked, healerList, assignment)
         reverseAssignments[healerList[key]] = nil
       end
    end
+
+
 
    UpdateFrame()
 end
@@ -205,9 +214,10 @@ function CreateAssignmentGroup(assignment, playerList)
    nameFrame:SetWidth(140)
    assignmentGroups[assignment] = nameFrame
    assignmentWindow:AddChild(nameFrame)
-   local dropdown = CreateHealerDropdown(playerList, assignment)
-   dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) AssignHealer(widget, event, key, checked, playerList, assignment) end)
-   nameFrame:AddChild(dropdown)
+   --local dropdown = CreateHealerDropdown(playerList, assignment)
+   --dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) AssignHealer(widget, event, key, checked, playerList, assignment) end)
+   --nameFrame:AddChild(assignmentBox)
+   assignmentDropdownList[assignment] = nameFrame
 end
 
 
@@ -233,12 +243,14 @@ function SelectChannel(widget, event, key, checked)
       selectedChannels[s] = nil
    end
 
-   if debug then
-      print("Selected channels:")
-      for ch, id in pairs(selectedChannels) do
-         print("ch=" .. ch .. " id=" .. id)
+   DebugFunction(
+      function(ch, id)
+         print("Selected channels:")
+         for ch, id in pairs(selectedChannels) do
+            print("ch=" .. ch .. " id=" .. id)
+         end
       end
-   end
+   )
 end
 
 
@@ -316,9 +328,13 @@ end
 
 function ClassicHealAssignments:HandleChannelUpdate()
    UpdateChannels()
-   if debug then
-      print(unpack(selectedChannels))
-   end
+
+   DebugFunction(
+      function()
+         print("Selected announcement channels: " .. table.concat(table.getKeys(selectedChannels), ","))
+      end
+   )
+
    if channelDropdown ~= nil then
       local channels = GetAllChannelNames()
       channelDropdown:SetList(channels)
@@ -447,11 +463,75 @@ end
 
 
 function DragnDrop(widget)
+   widget.frame:ClearAllPoints()
    widget.frame:StartMoving()
    local cursorX, cursorY = GetCursorPosition()
    print("in dragndrop")
 end
 
-function Drop(widget)
-   widget.frame:StopMovingOrSizing()
+function PlayerFrameDrop(widget)
+   local uiScale = UIParent:GetEffectiveScale()
+   local cursorX, cursorY = GetCursorPosition()
+   local scaleCursorX = cursorX / uiScale
+   local scaleCursorY = cursorY / uiScale
+
+   print(widget:GetUserData("playerName"))
+   print("CURSOR LOCATION: " .. scaleCursorX .. ", " .. cursorY)
+   for assignment, frame in pairs(assignmentDropdownList) do
+      print(frame.frame:GetLeft() .. ", " .. frame.frame:GetRight())
+      print(frame.frame:GetTop() .. ", " .. frame.frame:GetBottom())
+      if scaleCursorX > frame.frame:GetLeft() and scaleCursorX < frame.frame:GetRight() then
+         if scaleCursorY > frame.frame:GetBottom() and scaleCursorY < frame.frame:GetTop() then
+            if(assignedHealers[assignment] ~= nil) then
+               tinsert(assignedHealers[assignment],widget:GetUserData("playerName"))
+            else
+               assignedHealers[assignment] = {widget:GetUserData("playerName")}
+            end
+            print("You did it! :)")
+         end
+      else
+         print("not found...")
+      end
+   end
+
+      for target, healers in pairs(assignedHealers) do
+         for _, player in pairs(healers) do
+            print(target .. ": " .. player)
+         end
+      end
+
+      CleanupFrame()
+      SetupFrameContainers()
+      UpdateFrame()
+end
+
+function dragAssign (assignment, playerName)
+   if not assignedHealers[assignment] then
+      assignedHealers[assignment] = {}
+      DebugPrint("creating assigned healers dict")
+   end
+   if not reverseAssignments[healerList[key]] then
+     reverseAssignments[healerList[key]] = {}
+   end
+
+   tinsert(reverseAssignments[playerName], assignment)
+   tinsert(assignedHealers[assignment], playerName)
+
+
+   --UpdateFrame()
+end
+
+function UpdateAssignments()
+   if assignmentDropdownList ~= nil then
+      for assignment, frame in pairs(assignmentDropdownList) do
+         if assignedHealers[assignment] ~= nil then
+            for _, healer in ipairs(assignedHealers[assignment]) do
+               local nameContainer = AceGUI:Create("SimpleGroup")
+               nameContainer:SetRelativeWidth(1)
+               nameContainer:AddChild(playerFrames[healer])
+               frame:AddChild(nameContainer)
+            end
+         end
+      end
+   end
 end

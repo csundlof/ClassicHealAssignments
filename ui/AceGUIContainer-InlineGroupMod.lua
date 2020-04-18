@@ -1,8 +1,8 @@
 --[[-----------------------------------------------------------------------------
-InlineGroup Container
-Simple container widget that creates a visible "box" with an optional title.
+InlineGroupMod Container
+Modification to stock AceGUI Inline Group. Adds additional position functions for drag&drop functionality
 -------------------------------------------------------------------------------]]
-local Type, Version = "InlineGroup", 21
+local Type, Version = "InlineGroupMod", 1
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 if not AceGUI or (AceGUI:GetWidgetVersion(Type) or 0) >= Version then return end
 
@@ -20,6 +20,7 @@ local methods = {
 		self:SetWidth(300)
 		self:SetHeight(100)
 		self:SetTitle("")
+      self:GetBottomLeft()
 	end,
 
 	-- ["OnRelease"] = nil,
@@ -52,7 +53,13 @@ local methods = {
 		end
 		content:SetHeight(contentheight)
 		content.height = contentheight
-	end
+	end,
+
+   ["GetBottomLeft"] = function(self)
+      local posX = self.frame:GetLeft()
+      local posY = self.frame:GetBottom()
+      return posX, posY
+   end
 }
 
 --[[-----------------------------------------------------------------------------
