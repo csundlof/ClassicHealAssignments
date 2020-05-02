@@ -532,7 +532,6 @@ function ClearAssignments(playerName)
 end
 
 function AssignHealer(assignment, playerName)
-
 -- set assignments, initialize if the tables are empty
    if(assignedHealers[assignment] ~= nil) then
       tinsert(assignedHealers[assignment], playerName)
