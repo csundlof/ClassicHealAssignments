@@ -5,9 +5,9 @@ local healLDB = LibStub("LibDataBroker-1.1"):NewDataObject("HealAssignments", {
    text = "HealAssignments",
    icon = "135907",
    OnTooltipShow = function(tooltip)
-	   tooltip:AddLine("ClassicHealAssignments")
+      tooltip:AddLine("ClassicHealAssignments")
       tooltip:AddLine(format("|cFFC41F3B%s:|r %s", "Click", "Open Assignment Panel"))
-	end,
+   end,
    OnClick = function()
       ClassicHealAssignments:ShowFrame()
    end,
@@ -97,7 +97,6 @@ function UpdateFrame()
 
    local roles = {}
    local classes = {}
-   local dispellerList = {}
    local healerList = {}
 
    classes, roles = GetRaidRoster()
@@ -117,18 +116,17 @@ function UpdateFrame()
                nameFrame:SetCallback("OnDragStart", function(widget) DragStart(widget) end )    
                nameFrame:SetCallback("OnDragStop", function(widget) DragStop(widget) end)
                playerFrames[player] = nameFrame
+               playerFrames[player]:SetText(player)
                local nameContainer = AceGUI:Create("SimpleGroup")
                nameContainer:SetRelativeWidth(1)
                nameContainer:AddChild(nameFrame)
 
-			   -- add the player frame to the healer container only if they are unassigned
-			   if reverseAssignments[player] == nil then
-					healerGroup:AddChild(nameContainer)
-			   end
+               -- add the player frame to the healer container only if they are unassigned
+               if reverseAssignments[player] == nil then
+                  healerGroup:AddChild(nameContainer)
+               end
             end
 
-            local playerFrameText = player
-            playerFrames[player]:SetText(playerFrameText)
             tinsert(healerList, player)
 
             DebugPrint(player)
@@ -140,17 +138,17 @@ function UpdateFrame()
       if role == "MAINTANK" then
          for _, player in ipairs(players) do
             if assignmentGroups[player] == nil then
-               CreateAssignmentGroup(player, healerList)
+               CreateAssignmentGroup(player)
             end
             DebugPrint(player)
          end
       elseif role == "RAID" then
          if assignmentGroups[role] == nil then
-            CreateAssignmentGroup("RAID", healerList)
+            CreateAssignmentGroup("RAID")
          end
       elseif role == "DISPELS" then
          if assignmentGroups[role] == nil then
-            CreateAssignmentGroup("DISPELS", dispellerList)
+            CreateAssignmentGroup("DISPELS")
          end
       end
    end
@@ -200,7 +198,7 @@ function AnnounceHealers()
 end
 
 
-function CreateAssignmentGroup(assignment, playerList)
+function CreateAssignmentGroup(assignment)
    local nameFrame = AceGUI:Create("InlineGroup")
    nameFrame:SetTitle(assignment)
    nameFrame:SetWidth(140)
@@ -454,7 +452,6 @@ end
 function DragStart(widget)
    widget.frame:ClearAllPoints()
    widget.frame:StartMoving()
-   local cursorX, cursorY = GetCursorPosition()
 end
 
 
@@ -468,37 +465,23 @@ function DragStop(widget)
 
    -- check the unassigned group
    if scaleCursorX > healerGroup.frame:GetLeft() and scaleCursorX < healerGroup.frame:GetRight() then
-		if scaleCursorY > healerGroup.frame:GetBottom() and scaleCursorY < healerGroup.frame:GetTop() then
-		-- Cursor in the unassigned group. Just need to reset assignments
-			ClearAssignments(playerName)
-		end
-	else
-	   for assignment, frame in pairs(assignmentList) do
-		  -- check if the cursor drop is within the frame area
-		  if scaleCursorX > frame.frame:GetLeft() and scaleCursorX < frame.frame:GetRight() then
-			 if scaleCursorY > frame.frame:GetBottom() and scaleCursorY < frame.frame:GetTop() then
-				
-				-- correct frame found, clearing all assignments for correct reassignment
-				ClearAssignments(playerName)
-
-				-- set assignments, initialize if the tables are empty
-				if(assignedHealers[assignment] ~= nil) then
-				   tinsert(assignedHealers[assignment],playerName)
-				else
-				   assignedHealers[assignment] = {playerName}
-				end
-
-				-- separate if statement to check if the individual player's assignments are empty
-				if(reverseAssignments[player] ~= nil) then
-					tinsert(reverseAssignments[playerName], assignment)
-				else
-				   reverseAssignments[playerName] = {assignment}				
-				end
-			 end
-		   end
-		end
-	end
-	  -- refresh frame
+      if scaleCursorY > healerGroup.frame:GetBottom() and scaleCursorY < healerGroup.frame:GetTop() then
+         -- Cursor in the unassigned group. Just need to reset assignments
+         ClearAssignments(playerName)
+      end
+   else
+      for assignment, frame in pairs(assignmentList) do
+        -- check if the cursor drop is within the frame area
+        if scaleCursorX >= frame.frame:GetLeft() and scaleCursorX <= frame.frame:GetRight() then
+          if scaleCursorY >= frame.frame:GetBottom() and scaleCursorY <= frame.frame:GetTop() then
+            -- correct frame found, clearing all assignments for correct reassignment
+            ClearAssignments(playerName)
+            AssignHealer(assignment, playerName)
+          end
+         end
+      end
+   end
+     -- refresh frame
       CleanupFrame()
       SetupFrameContainers()
       UpdateFrame()
@@ -510,7 +493,7 @@ function UpdateAssignments()
       for assignment, frame in pairs(assignmentList) do
          if assignedHealers[assignment] ~= nil then
             for _, healer in ipairs(assignedHealers[assignment]) do
-			   -- uses nameContainer or else the healer frames will stick to each other
+            -- uses nameContainer or else the healer frames will stick to each other
                local nameContainer = AceGUI:Create("SimpleGroup") 
                nameContainer:SetRelativeWidth(1)
                nameContainer:AddChild(playerFrames[healer])
@@ -525,25 +508,42 @@ end
 -- Clears all assignments for the selected player
 -- Alters both assignedHealers array and reverseAssignments array
 function ClearAssignments(playerName)
-	-- if there aren't any assignments for the player, do nothing
-	if reverseAssignments[playerName] ~= nil then
-		for _, assignment in pairs (reverseAssignments[playerName]) do
-			-- if the assignment itself is empty, no reason to do anything
-			if assignedHealers[assignment] ~= nil then
-				local healerIndex = table.indexOf(assignedHealers[assignment], playerName)
-				tremove(assignedHealers[assignment], healerIndex)
-				local assignmentIndex = table.indexOf(reverseAssignments[playerName], assignment)
-				tremove(reverseAssignments[playerName], assignmentIndex)
-				
-				-- if the tables are empty, clear them so they can be initialized on refresh
-				if table.isEmpty(reverseAssignments[playerName]) then
-			 		reverseAssignments[playerName] = nil
-				end
+   -- if there aren't any assignments for the player, do nothing
+   if reverseAssignments[playerName] ~= nil then
+      for _, assignment in pairs (reverseAssignments[playerName]) do
+         -- if the assignment itself is empty, no reason to do anything
+         if assignedHealers[assignment] ~= nil then
+            local healerIndex = table.indexOf(assignedHealers[assignment], playerName)
+            tremove(assignedHealers[assignment], healerIndex)
+            local assignmentIndex = table.indexOf(reverseAssignments[playerName], assignment)
+            tremove(reverseAssignments[playerName], assignmentIndex)
+            
+            -- if the tables are empty, clear them so they can be initialized on refresh
+            if table.isEmpty(reverseAssignments[playerName]) then
+               reverseAssignments[playerName] = nil
+            end
 
-				if table.isEmpty(assignedHealers[assignment]) then
-			 		assignedHealers[assignment] = nil
-				end
-			end
-		end
-	end
+            if table.isEmpty(assignedHealers[assignment]) then
+               assignedHealers[assignment] = nil
+            end
+         end
+      end
+   end
+end
+
+function AssignHealer(assignment, playerName)
+
+-- set assignments, initialize if the tables are empty
+   if(assignedHealers[assignment] ~= nil) then
+      tinsert(assignedHealers[assignment], playerName)
+   else
+      assignedHealers[assignment] = {playerName}
+   end
+   
+   -- separate if statement to check if the individual player's assignments are empty
+   if(reverseAssignments[player] ~= nil) then
+      tinsert(reverseAssignments[playerName], assignment)
+   else
+      reverseAssignments[playerName] = {assignment}				
+   end
 end
