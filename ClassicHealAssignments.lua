@@ -5,9 +5,9 @@ local healLDB = LibStub("LibDataBroker-1.1"):NewDataObject("HealAssignments", {
    text = "HealAssignments",
    icon = "135907",
    OnTooltipShow = function(tooltip)
-	   tooltip:AddLine("ClassicHealAssignments")
+      tooltip:AddLine("ClassicHealAssignments")
       tooltip:AddLine(format("|cFFC41F3B%s:|r %s", "Click", "Open Assignment Panel"))
-	end,
+   end,
    OnClick = function()
       ClassicHealAssignments:ShowFrame()
    end,
@@ -19,15 +19,20 @@ local CLASS_ICON_TCOORDS = CLASS_ICON_TCOORDS
 
 local playerFrames = {}
 
+local assignmentList = {}
+
 local assignmentGroups = {}
 
+
+-- Arrays for Healers under Assignments and Assignments under Healers respectively
 assignedHealers = {}
-local reverseAssignments = {}
+reverseAssignments = {}
+
 
 local classes = {}
 local roles = {}
 
-local healerColors = {["Druid"] = {1.00, 0.49, 0.04}, ["Priest"] = {1.00, 1.00, 1.00}, ["Paladin"] = {0.96, 0.55, 0.73}, ["Shaman"] = {0.96, 0.55, 0.73}}
+local healerColors = {["Druid"] = {1.00, 0.49, 0.04}, ["Mage"] = {0.25, 0.78, 0.92}, ["Priest"] = {1.00, 1.00, 1.00}, ["Paladin"] = {0.96, 0.55, 0.73}, ["Shaman"] = {0.96, 0.55, 0.73}}
 
 local defaultChannels = {"SAY", "PARTY", "WHISPER", "GUILD", "OFFICER", "YELL", "RAID", "RAID_WARNING"}
 local activeChannels = {}
@@ -79,6 +84,8 @@ function ClassicHealAssignments:ShowFrame(input)
    if mainWindow:IsVisible() then
       mainWindow:Hide()
    else
+      CleanupFrame()
+      SetupFrameContainers()
       UpdateFrame()
       mainWindow:Show()
    end
@@ -90,7 +97,6 @@ function UpdateFrame()
 
    local roles = {}
    local classes = {}
-   local dispellerList = {}
    local healerList = {}
 
    classes, roles = GetRaidRoster()
@@ -102,30 +108,28 @@ function UpdateFrame()
       if healerColors[class] ~= nil then
          for _, player in ipairs(players) do
             if playerFrames[player] == nil then
-               local nameFrame = AceGUI:Create("InteractiveLabel")
+               local nameFrame = AceGUI:Create("DragLabel")
                nameFrame:SetRelativeWidth(1)
                local classColors = healerColors[class]
                nameFrame:SetColor(classColors[1], classColors[2], classColors[3])
+               nameFrame:SetUserData("playerName", player)
+               nameFrame:SetCallback("OnDragStart", function(widget) DragStart(widget) end )    
+               nameFrame:SetCallback("OnDragStop", function(widget) DragStop(widget) end)
                playerFrames[player] = nameFrame
-               healerGroup:AddChild(nameFrame)
+               playerFrames[player]:SetText(player)
+               local nameContainer = AceGUI:Create("SimpleGroup")
+               nameContainer:SetRelativeWidth(1)
+               nameContainer:AddChild(nameFrame)
+
+               -- add the player frame to the healer container only if they are unassigned
+               if reverseAssignments[player] == nil then
+                  healerGroup:AddChild(nameContainer)
+               end
             end
-
-            local playerFrameText = player
-
-            if not table.isEmpty(GetAssignmentsForPlayer(player)) then
-               playerFrameText = playerFrameText .. "(X)"
-            end
-
-            playerFrames[player]:SetText(playerFrameText)
 
             tinsert(healerList, player)
-            tinsert(dispellerList, player)
 
             DebugPrint(player)
-         end
-      elseif class == "Mage" then
-         for _, player in ipairs(players) do
-            tinsert(dispellerList, player)
          end
       end
    end
@@ -134,54 +138,28 @@ function UpdateFrame()
       if role == "MAINTANK" then
          for _, player in ipairs(players) do
             if assignmentGroups[player] == nil then
-               CreateAssignmentGroup(player, healerList)
+               CreateAssignmentGroup(player)
             end
             DebugPrint(player)
          end
       elseif role == "RAID" then
          if assignmentGroups[role] == nil then
-            CreateAssignmentGroup("RAID", healerList)
+            CreateAssignmentGroup("RAID")
          end
       elseif role == "DISPELS" then
          if assignmentGroups[role] == nil then
-            CreateAssignmentGroup("DISPELS", dispellerList)
+            CreateAssignmentGroup("DISPELS")
          end
       end
    end
 
-
    AssignmentPresetsUpdatePresets()
+   UpdateAssignments()
 
-   -- calling twice to avoid inconsistencies between re-renders
+   -- calling thrice to avoid inconsistencies between re-renders
    mainWindow:DoLayout()
    mainWindow:DoLayout()
-end
-
-
-function AssignHealer(widget, event, key, checked, healerList, assignment)
-   if not assignedHealers[assignment] then
-      assignedHealers[assignment] = {}
-      DebugPrint("creating assigned healers dict")
-   end
-   if not reverseAssignments[healerList[key]] then
-     reverseAssignments[healerList[key]] = {}
-   end
-   if checked then
-      DebugPrint("assigning " .. healerList[key] .. " to " .. assignment)
-
-      tinsert(reverseAssignments[healerList[key]], assignment)
-      tinsert(assignedHealers[assignment], healerList[key])
-   else
-      local healerIndex = table.indexOf(assignedHealers[assignment], healerList[key])
-      tremove(assignedHealers[assignment], healerIndex)
-      local assignmentIndex = table.indexOf(reverseAssignments[healerList[key]], assignment)
-      tremove(reverseAssignments[healerList[key]], assignmentIndex)
-      if table.isEmpty(reverseAssignments[healerList[key]]) then
-        reverseAssignments[healerList[key]] = nil
-      end
-   end
-
-   UpdateFrame()
+   mainWindow:DoLayout()
 end
 
 
@@ -220,15 +198,13 @@ function AnnounceHealers()
 end
 
 
-function CreateAssignmentGroup(assignment, playerList)
+function CreateAssignmentGroup(assignment)
    local nameFrame = AceGUI:Create("InlineGroup")
    nameFrame:SetTitle(assignment)
    nameFrame:SetWidth(140)
    assignmentGroups[assignment] = nameFrame
    assignmentWindow:AddChild(nameFrame)
-   local dropdown = CreateHealerDropdown(playerList, assignment)
-   dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) AssignHealer(widget, event, key, checked, playerList, assignment) end)
-   nameFrame:AddChild(dropdown)
+   assignmentList[assignment] = nameFrame
 end
 
 
@@ -469,5 +445,104 @@ function GetAssignmentsForPlayer(player)
       return reverseAssignments[player]
    else
       return {}
+   end
+end
+
+
+function DragStart(widget)
+   widget.frame:ClearAllPoints()
+   widget.frame:StartMoving()
+end
+
+
+function DragStop(widget)
+   local uiScale = UIParent:GetEffectiveScale()
+   local cursorX, cursorY = GetCursorPosition()
+   local scaleCursorX = cursorX / uiScale
+   local scaleCursorY = cursorY / uiScale
+
+   local playerName = widget:GetUserData("playerName")
+
+   -- check the unassigned group
+   if scaleCursorX > healerGroup.frame:GetLeft() and scaleCursorX < healerGroup.frame:GetRight() then
+      if scaleCursorY > healerGroup.frame:GetBottom() and scaleCursorY < healerGroup.frame:GetTop() then
+         -- Cursor in the unassigned group. Just need to reset assignments
+         ClearAssignments(playerName)
+      end
+   else
+      for assignment, frame in pairs(assignmentList) do
+        -- check if the cursor drop is within the frame area
+        if scaleCursorX >= frame.frame:GetLeft() and scaleCursorX <= frame.frame:GetRight() then
+          if scaleCursorY >= frame.frame:GetBottom() and scaleCursorY <= frame.frame:GetTop() then
+            -- correct frame found, clearing all assignments for correct reassignment
+            ClearAssignments(playerName)
+            AssignHealer(assignment, playerName)
+          end
+         end
+      end
+   end
+     -- refresh frame
+      CleanupFrame()
+      SetupFrameContainers()
+      UpdateFrame()
+end
+
+
+function UpdateAssignments()
+   if assignmentList ~= nil then
+      for assignment, frame in pairs(assignmentList) do
+         if assignedHealers[assignment] ~= nil then
+            for _, healer in ipairs(assignedHealers[assignment]) do
+            -- uses nameContainer or else the healer frames will stick to each other
+               local nameContainer = AceGUI:Create("SimpleGroup") 
+               nameContainer:SetRelativeWidth(1)
+               nameContainer:AddChild(playerFrames[healer])
+               frame:AddChild(nameContainer)
+            end
+         end
+      end
+   end
+end
+
+
+-- Clears all assignments for the selected player
+-- Alters both assignedHealers array and reverseAssignments array
+function ClearAssignments(playerName)
+   -- if there aren't any assignments for the player, do nothing
+   if reverseAssignments[playerName] ~= nil then
+      for _, assignment in pairs (reverseAssignments[playerName]) do
+         -- if the assignment itself is empty, no reason to do anything
+         if assignedHealers[assignment] ~= nil then
+            local healerIndex = table.indexOf(assignedHealers[assignment], playerName)
+            tremove(assignedHealers[assignment], healerIndex)
+            local assignmentIndex = table.indexOf(reverseAssignments[playerName], assignment)
+            tremove(reverseAssignments[playerName], assignmentIndex)
+            
+            -- if the tables are empty, clear them so they can be initialized on refresh
+            if table.isEmpty(reverseAssignments[playerName]) then
+               reverseAssignments[playerName] = nil
+            end
+
+            if table.isEmpty(assignedHealers[assignment]) then
+               assignedHealers[assignment] = nil
+            end
+         end
+      end
+   end
+end
+
+function AssignHealer(assignment, playerName)
+-- set assignments, initialize if the tables are empty
+   if(assignedHealers[assignment] ~= nil) then
+      tinsert(assignedHealers[assignment], playerName)
+   else
+      assignedHealers[assignment] = {playerName}
+   end
+   
+   -- separate if statement to check if the individual player's assignments are empty
+   if(reverseAssignments[player] ~= nil) then
+      tinsert(reverseAssignments[playerName], assignment)
+   else
+      reverseAssignments[playerName] = {assignment}				
    end
 end

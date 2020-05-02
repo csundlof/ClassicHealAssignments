@@ -5,6 +5,8 @@ local AceGUI = LibStub("AceGUI-3.0")
 
 -- variables to store presets
 local presetList = {}
+local presetListReverse = {}
+
 local presetFrames = {}
 local selectedPreset = "Default"
 local presetEditBoxText = "Preset Name"
@@ -79,6 +81,9 @@ function SavePreset(name)
    presetList[name] = {}
    presetList[name] = CopyArray(assignedHealers)
 
+   presetListReverse[name] = {}
+   presetListReverse[name] = CopyArray(reverseAssignments)
+
    CleanupFrame()
    SetupFrameContainers()
    UpdateFrame()
@@ -91,8 +96,13 @@ function LoadPreset(name)
 
    presetEditBoxText = name
    selectedPreset = name
+
    assignedHealers = {}
    assignedHealers = CopyArray(presetList[name])
+
+   reverseAssignments = {}
+   reverseAssignments = CopyArray(presetListReverse[name])
+
    CleanupFrame()
    SetupFrameContainers()
    UpdateFrame()
