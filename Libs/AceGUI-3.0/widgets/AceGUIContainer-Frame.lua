@@ -203,7 +203,7 @@ local function Constructor()
 
 	local statusbg = CreateFrame("Button", nil, frame)
 	statusbg:SetPoint("BOTTOMLEFT", 15, 15)
-	statusbg:SetPoint("BOTTOMRIGHT", -132, 15)
+	statusbg:SetPoint("BOTTOMRIGHT", -350, 15)
 	statusbg:SetHeight(24)
 	statusbg:SetBackdrop(PaneBackdrop)
 	statusbg:SetBackdropColor(0.1,0.1,0.1)

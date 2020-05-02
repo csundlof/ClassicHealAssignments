@@ -9,3 +9,6 @@ ClassicHealAssignments.lua
 AssignmentPresets.lua
 utils\table.lua
 utils\helpers.lua
+ui\customlayouts.lua
+ui\AceGUIWidget-DragLabel.lua
+ui\AceGUIContainer-InlineGroupMod.lua

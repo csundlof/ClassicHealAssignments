@@ -1,40 +1,67 @@
 local ClassicHealAssignments = LibStub("AceAddon-3.0"):NewAddon("ClassicHealAssignments", "AceConsole-3.0", "AceEvent-3.0");
 local AceGUI = LibStub("AceGUI-3.0")
+local healLDB = LibStub("LibDataBroker-1.1"):NewDataObject("HealAssignments", {
+   type = "launcher",
+   text = "HealAssignments",
+   icon = "135907",
+   OnTooltipShow = function(tooltip)
+	   tooltip:AddLine("ClassicHealAssignments")
+      tooltip:AddLine(format("|cFFC41F3B%s:|r %s", "Click", "Open Assignment Panel"))
+	end,
+   OnClick = function()
+      ClassicHealAssignments:ShowFrame()
+   end,
+})
+local icon = LibStub("LibDBIcon-1.0")
+
+
 local CLASS_ICON_TCOORDS = CLASS_ICON_TCOORDS
 
 local playerFrames = {}
 
+local assignmentList = {}
+
 local assignmentGroups = {}
 
+-- Arrays for Healers under Assignments and Assignments under Healers respectively
 assignedHealers = {}
+reverseAssignments = {}
 
 local classes = {}
 local roles = {}
 
-local healerColors = {["Druid"] = {1.00, 0.49, 0.04}, ["Priest"] = {1.00, 1.00, 1.00}, ["Paladin"] = {0.96, 0.55, 0.73}, ["Shaman"] = {0.96, 0.55, 0.73}}
+local healerColors = {["Druid"] = {1.00, 0.49, 0.04}, ["Mage"] = {0.25, 0.78, 0.92}, ["Priest"] = {1.00, 1.00, 1.00}, ["Paladin"] = {0.96, 0.55, 0.73}, ["Shaman"] = {0.96, 0.55, 0.73}}
 
-local defaultChannels = {"SAY", "PARTY", "GUILD", "OFFICER", "YELL", "RAID", "RAID_WARNING"}
+local defaultChannels = {"SAY", "PARTY", "WHISPER", "GUILD", "OFFICER", "YELL", "RAID", "RAID_WARNING"}
 local activeChannels = {}
 local channelDropdown = nil
 local selectedChannels = {["RAID"] = "default"}
 
 function ClassicHealAssignments:OnInitialize()
-      ClassicHealAssignments:RegisterChatCommand("heal", "ShowFrame")
+   self.db = LibStub("AceDB-3.0"):New("ClassicHealAssignmentsDB", {
+      profile = {
+         minimap = {
+            hide = false
+         },
+      },
+   })
+   icon:Register("HealAssignments", healLDB, self.db.profile.minimap)
+   ClassicHealAssignments:RegisterChatCommand("heal", "ShowFrame")
 end
 
 
 function ClassicHealAssignments:OnEnable()
-      UpdateChannels()
-      SetupFrame()
-      SetupFrameContainers()
-      UpdateFrame()
-      RegisterEvents()
+   UpdateChannels()
+   SetupFrame()
+   SetupFrameContainers()
+   UpdateFrame()
+   RegisterEvents()
 
-      debug = false
+   debug = false
 
-      if not debug then
-         mainWindow:Hide()
-      end
+   if not debug then
+      mainWindow:Hide()
+   end
 end
 
 function ClassicHealAssignments:OnDisable()
@@ -55,6 +82,8 @@ function ClassicHealAssignments:ShowFrame(input)
    if mainWindow:IsVisible() then
       mainWindow:Hide()
    else
+      CleanupFrame()
+      SetupFrameContainers()
       UpdateFrame()
       mainWindow:Show()
    end
@@ -78,30 +107,29 @@ function UpdateFrame()
       if healerColors[class] ~= nil then
          for _, player in ipairs(players) do
             if playerFrames[player] == nil then
-               local nameFrame = AceGUI:Create("InteractiveLabel")
+               local nameFrame = AceGUI:Create("DragLabel")
                nameFrame:SetRelativeWidth(1)
                local classColors = healerColors[class]
                nameFrame:SetColor(classColors[1], classColors[2], classColors[3])
+               nameFrame:SetUserData("playerName", player)
+               nameFrame:SetCallback("OnDragStart", function(widget) DragStart(widget) end )    
+               nameFrame:SetCallback("OnDragStop", function(widget) DragStop(widget) end)
                playerFrames[player] = nameFrame
-               healerGroup:AddChild(nameFrame)
+               local nameContainer = AceGUI:Create("SimpleGroup")
+               nameContainer:SetRelativeWidth(1)
+               nameContainer:AddChild(nameFrame)
+
+			   -- add the player frame to the healer container only if they are unassigned
+			   if reverseAssignments[player] == nil then
+					healerGroup:AddChild(nameContainer)
+			   end
             end
 
             local playerFrameText = player
-
-            if not table.isEmpty(GetAssignmentsForPlayer(player)) then
-               playerFrameText = playerFrameText .. "(X)"
-            end
-
             playerFrames[player]:SetText(playerFrameText)
-
             tinsert(healerList, player)
-            tinsert(dispellerList, player)
 
             DebugPrint(player)
-         end
-      elseif class == "Mage" then
-         for _, player in ipairs(players) do
-            tinsert(dispellerList, player)
          end
       end
    end
@@ -127,28 +155,12 @@ function UpdateFrame()
 
 
    AssignmentPresetsUpdatePresets()
+   UpdateAssignments()
 
-   -- calling twice to avoid inconsistencies between re-renders
+   -- calling thrice to avoid inconsistencies between re-renders
    mainWindow:DoLayout()
    mainWindow:DoLayout()
-end
-
-
-function AssignHealer(widget, event, key, checked, healerList, assignment)
-   if not assignedHealers[assignment] then
-      assignedHealers[assignment] = {}
-      DebugPrint("creating assigned healers dict")
-   end
-   if checked then
-      DebugPrint("assigning " .. healerList[key] .. " to " .. assignment)
-
-      tinsert(assignedHealers[assignment], healerList[key])
-   else
-      local healerIndex = table.indexOf(assignedHealers[assignment], healerList[key])
-      tremove(assignedHealers[assignment], healerIndex)
-   end
-
-   UpdateFrame()
+   mainWindow:DoLayout()
 end
 
 
@@ -166,6 +178,7 @@ function CreateHealerDropdown(healers, assignment)
    return dropdown
 end
 
+
 function AnnounceHealers()
    DebugPrint("\n-----------\nASSIGNMENTS")
 
@@ -179,6 +192,10 @@ function AnnounceHealers()
          AnnounceAssignments(assignment)
       end
    end
+
+   if selectedChannels["WHISPER"] ~= nil then
+     AnnounceWhispers()
+   end
 end
 
 
@@ -188,9 +205,7 @@ function CreateAssignmentGroup(assignment, playerList)
    nameFrame:SetWidth(140)
    assignmentGroups[assignment] = nameFrame
    assignmentWindow:AddChild(nameFrame)
-   local dropdown = CreateHealerDropdown(playerList, assignment)
-   dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) AssignHealer(widget, event, key, checked, playerList, assignment) end)
-   nameFrame:AddChild(dropdown)
+   assignmentList[assignment] = nameFrame
 end
 
 
@@ -216,12 +231,14 @@ function SelectChannel(widget, event, key, checked)
       selectedChannels[s] = nil
    end
 
-   if debug then
-      print("Selected channels:")
-      for ch, id in pairs(selectedChannels) do
-         print("ch=" .. ch .. " id=" .. id)
+   DebugFunction(
+      function(ch, id)
+         print("Selected channels:")
+         for ch, id in pairs(selectedChannels) do
+            print("ch=" .. ch .. " id=" .. id)
+         end
       end
-   end
+   )
 end
 
 
@@ -231,8 +248,9 @@ function CreateChannelDropdown()
    dropdown:SetList(channels)
    dropdown:SetLabel("Announcement channels")
    dropdown:SetText("Select channels")
-   dropdown:SetWidth(140)
+   dropdown:SetWidth(200)
    dropdown:SetMultiselect(true)
+   dropdown:SetUserData("name", "dropdown")
    dropdown:SetCallback("OnValueChanged", function(widget, event, key, checked) SelectChannel(widget, event, key, checked) end)
 
    -- looks through channel list to pull the index value & checks the channel in the list
@@ -250,12 +268,21 @@ end
 -- Sends MSG to preselected channels
 function AnnounceAssignments(msg)
    for ch, id in pairs(selectedChannels) do
-      if id == "default" then
+      if id == "default" and ch ~= "WHISPER" then
          SendChatMessage(msg, ch, nil)
       else
          SendChatMessage(msg, "CHANNEL", nil, id)
       end
    end
+end
+
+
+-- Sends assignments to all assigned players in a whisper
+function AnnounceWhispers()
+    for healer, a in pairs(reverseAssignments) do
+      local msg = "Your healing assignments: "..table.concat(a, ", ")
+      SendChatMessage(msg, "WHISPER", nil, healer)
+    end
 end
 
 
@@ -289,9 +316,13 @@ end
 
 function ClassicHealAssignments:HandleChannelUpdate()
    UpdateChannels()
-   if debug then
-      print(unpack(selectedChannels))
-   end
+
+   DebugFunction(
+      function()
+         print("Selected announcement channels: " .. table.concat(table.getKeys(selectedChannels), ","))
+      end
+   )
+
    if channelDropdown ~= nil then
       local channels = GetAllChannelNames()
       channelDropdown:SetList(channels)
@@ -320,35 +351,51 @@ end
 
 
 function SetupFrame()
+   uiRegisterCustomLayouts()
+
    mainWindow = AceGUI:Create("Frame")
    mainWindow:SetTitle("Classic Heal Assignments")
    mainWindow:SetStatusText("Classic Heal Assignments")
-   mainWindow:SetLayout("Flow")
+   mainWindow:SetLayout("mainWindowLayout")
    mainWindow:SetWidth("1000")
 end
 
 
 function SetupFrameContainers()
+
    healerGroup = AceGUI:Create("InlineGroup")
    healerGroup:SetTitle("Healers")
    healerGroup:SetWidth(90)
+   healerGroup:SetUserData("name", "healerGroup")
    mainWindow:AddChild(healerGroup)
 
    assignmentWindow = AceGUI:Create("InlineGroup")
    assignmentWindow:SetTitle("Assignments")
    assignmentWindow:SetRelativeWidth(0.9)
    assignmentWindow:SetLayout("Flow")
+   assignmentWindow:SetUserData("name", "assignmentWindow")
    mainWindow:AddChild(assignmentWindow)
 
-   AssignmentPresetsSetupFrameContainers(mainWindow, assignedHealers)
+   AssignmentPresetsSetupFrameContainers(mainWindow)
+
+   announceMaster = AceGUI:Create("SimpleGroup")
+   announceMaster:SetWidth(200)
+   announceMaster:SetHeight(65)
+   announceMaster:SetUserData("name", "announceMaster")
+   announceMaster:SetLayout("AnnouncementsPane")
+   mainWindow:AddChild(announceMaster)
+
+   channelDropdown = CreateChannelDropdown()
+   announceMaster:AddChild(channelDropdown)
 
    local announceButton = AceGUI:Create("Button")
    announceButton:SetText("Announce assignments")
    announceButton:SetCallback("OnClick", function() AnnounceHealers() end)
-   mainWindow:AddChild(announceButton)
+   announceButton:SetHeight(20)
+   announceButton:SetWidth(200)
+   announceButton:SetUserData("name", "announceButton")
+   announceMaster:AddChild(announceButton)
 
-   channelDropdown = CreateChannelDropdown()
-   mainWindow:AddChild(channelDropdown)
 end
 
 
@@ -388,7 +435,6 @@ end
 function ClassicHealAssignments:ReplyWithAssignment(event, msg, character)
    -- chopping off server tag that comes with character to parse it more easily
    local characterParse = string.gsub(character, "-(.*)", "")
-   
    if msg == "heal" and UnitInRaid(characterParse) then
       SendChatMessage("You are assigned to: " .. table.concat(GetAssignmentsForPlayer(characterParse), ", "), "WHISPER", nil, character)
    end
@@ -396,13 +442,107 @@ end
 
 
 function GetAssignmentsForPlayer(player)
-   local assignments = {}
+   if reverseAssignments[player] ~= nil then
+      return reverseAssignments[player]
+   else
+      return {}
+   end
+end
 
-   for target, healers in pairs(assignedHealers) do
-      if tContains(healers, player) then
-         table.insert(assignments, target)
+
+function DragStart(widget)
+   widget.frame:ClearAllPoints()
+   widget.frame:StartMoving()
+   local cursorX, cursorY = GetCursorPosition()
+end
+
+
+function DragStop(widget)
+   local uiScale = UIParent:GetEffectiveScale()
+   local cursorX, cursorY = GetCursorPosition()
+   local scaleCursorX = cursorX / uiScale
+   local scaleCursorY = cursorY / uiScale
+
+   local playerName = widget:GetUserData("playerName")
+
+   -- check the unassigned group
+   if scaleCursorX > healerGroup.frame:GetLeft() and scaleCursorX < healerGroup.frame:GetRight() then
+		if scaleCursorY > healerGroup.frame:GetBottom() and scaleCursorY < healerGroup.frame:GetTop() then
+		-- Cursor in the unassigned group. Just need to reset assignments
+			ClearAssignments(playerName)
+		end
+	else
+	   for assignment, frame in pairs(assignmentList) do
+		  -- check if the cursor drop is within the frame area
+		  if scaleCursorX > frame.frame:GetLeft() and scaleCursorX < frame.frame:GetRight() then
+			 if scaleCursorY > frame.frame:GetBottom() and scaleCursorY < frame.frame:GetTop() then
+				
+				-- correct frame found, clearing all assignments for correct reassignment
+				ClearAssignments(playerName)
+
+				-- set assignments, initialize if the tables are empty
+				if(assignedHealers[assignment] ~= nil) then
+				   tinsert(assignedHealers[assignment],playerName)
+				else
+				   assignedHealers[assignment] = {playerName}
+				end
+
+				-- separate if statement to check if the individual player's assignments are empty
+				if(reverseAssignments[player] ~= nil) then
+					tinsert(reverseAssignments[playerName], assignment)
+				else
+				   reverseAssignments[playerName] = {assignment}				
+				end
+			 end
+		   end
+		end
+	end
+	  -- refresh frame
+      CleanupFrame()
+      SetupFrameContainers()
+      UpdateFrame()
+end
+
+
+function UpdateAssignments()
+   if assignmentList ~= nil then
+      for assignment, frame in pairs(assignmentList) do
+         if assignedHealers[assignment] ~= nil then
+            for _, healer in ipairs(assignedHealers[assignment]) do
+			   -- uses nameContainer or else the healer frames will stick to each other
+               local nameContainer = AceGUI:Create("SimpleGroup") 
+               nameContainer:SetRelativeWidth(1)
+               nameContainer:AddChild(playerFrames[healer])
+               frame:AddChild(nameContainer)
+            end
+         end
       end
    end
+end
 
-   return assignments
+
+-- Clears all assignments for the selected player
+-- Alters both assignedHealers array and reverseAssignments array
+function ClearAssignments(playerName)
+	-- if there aren't any assignments for the player, do nothing
+	if reverseAssignments[playerName] ~= nil then
+		for _, assignment in pairs (reverseAssignments[playerName]) do
+			-- if the assignment itself is empty, no reason to do anything
+			if assignedHealers[assignment] ~= nil then
+				local healerIndex = table.indexOf(assignedHealers[assignment], playerName)
+				tremove(assignedHealers[assignment], healerIndex)
+				local assignmentIndex = table.indexOf(reverseAssignments[playerName], assignment)
+				tremove(reverseAssignments[playerName], assignmentIndex)
+				
+				-- if the tables are empty, clear them so they can be initialized on refresh
+				if table.isEmpty(reverseAssignments[playerName]) then
+			 		reverseAssignments[playerName] = nil
+				end
+
+				if table.isEmpty(assignedHealers[assignment]) then
+			 		assignedHealers[assignment] = nil
+				end
+			end
+		end
+	end
 end
