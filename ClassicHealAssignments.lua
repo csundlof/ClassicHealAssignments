@@ -23,9 +23,11 @@ local assignmentList = {}
 
 local assignmentGroups = {}
 
+
 -- Arrays for Healers under Assignments and Assignments under Healers respectively
 assignedHealers = {}
 reverseAssignments = {}
+
 
 local classes = {}
 local roles = {}
@@ -152,7 +154,6 @@ function UpdateFrame()
          end
       end
    end
-
 
    AssignmentPresetsUpdatePresets()
    UpdateAssignments()

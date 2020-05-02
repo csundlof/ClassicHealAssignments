@@ -6,6 +6,7 @@ local AceGUI = LibStub("AceGUI-3.0")
 -- variables to store presets
 local presetList = {}
 local presetListReverse = {}
+
 local presetFrames = {}
 local selectedPreset = "Default"
 local presetEditBoxText = "Preset Name"
